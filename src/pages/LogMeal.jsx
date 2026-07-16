@@ -208,9 +208,9 @@ function ResultView({ outcome, meal, study, code, onLogAnother }) {
           </div>
         </div>
         <div className="ai-note" style={{ margin: "0 22px 16px", paddingTop: 12 }}>
-          {outcome.engine === "claude"
-            ? "Checked by Trewel's AI meal-matcher against your study's protocol. Deviation messages are pre-written by your study team — Trewel never generates its own dietary guidance."
-            : "Demo mode: this record came from Trewel's simulated analyzer (no AI credentials configured). Deviation messages are pre-written by your study team — Trewel never generates its own dietary guidance."}
+          {outcome.engine === "simulated" || outcome.engine === "seeded"
+            ? "Demo mode: this record came from Trewel's simulated analyzer (no AI credentials configured). Deviation messages are pre-written by your study team — Trewel never generates its own dietary guidance."
+            : "Checked by Trewel's AI meal-matcher against your study's protocol. Deviation messages are pre-written by your study team — Trewel never generates its own dietary guidance."}
         </div>
       </div>
       <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>

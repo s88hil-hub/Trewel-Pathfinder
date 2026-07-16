@@ -6,64 +6,66 @@
 // a production backend later.
 //
 //   analyzeMeal({ imageBase64, mediaType, note, protocol })
-//     -> { engine: "claude" | "simulated", result: { ...structured match } }
+//     -> { engine: "gemini" | "simulated", result: { ...structured match } }
 //
-// When ANTHROPIC_API_KEY (or an equivalent credential) is available, the
-// analysis is performed by a multimodal Claude call with a strict JSON
-// schema on the output. When no credential is available — or the API call
-// fails — a deterministic simulated analyzer keeps the demo functional, and
-// the response is labeled accordingly so the UI can disclose it.
+// When GEMINI_API_KEY is available, the analysis is performed by a
+// multimodal Gemini call (Google AI Studio's free tier — no billing
+// required) with a strict JSON schema on the output. When no credential is
+// available — or the API call fails — a deterministic simulated analyzer
+// keeps the demo functional, and the response is labeled accordingly so the
+// UI can disclose it.
 // ---------------------------------------------------------------------------
 
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
-const MODEL = "claude-opus-4-8";
+const GEMINI_MODEL = "gemini-2.0-flash";
 
 // Structured-output schema: what the model must return for every photo.
+// (Gemini's schema format is a constrained subset of OpenAPI/JSON Schema —
+// no additionalProperties, and types come from the SchemaType enum.)
 const RESULT_SCHEMA = {
-  type: "object",
+  type: SchemaType.OBJECT,
   properties: {
     is_food_photo: {
-      type: "boolean",
+      type: SchemaType.BOOLEAN,
       description: "True if the image clearly shows a meal or food items.",
     },
     privacy_flag: {
-      type: "boolean",
+      type: SchemaType.BOOLEAN,
       description:
         "True if the image appears to include people, faces, or identifiable surroundings beyond the plate.",
     },
     identified_items: {
-      type: "array",
+      type: SchemaType.ARRAY,
       items: {
-        type: "object",
+        type: SchemaType.OBJECT,
         properties: {
-          name: { type: "string" },
+          name: { type: SchemaType.STRING },
           estimated_portion: {
-            type: "string",
+            type: SchemaType.STRING,
             description: "Rough portion estimate, e.g. '~1 cup' or '1 fillet (~150 g)'.",
           },
         },
         required: ["name", "estimated_portion"],
-        additionalProperties: false,
       },
     },
     match_status: {
-      type: "string",
+      type: SchemaType.STRING,
       enum: ["on_protocol", "partial_deviation", "off_protocol"],
     },
     confidence: {
-      type: "string",
+      type: SchemaType.STRING,
       enum: ["high", "medium", "low"],
       description:
         "How certain the match is. high = items and protocol comparison are clear. medium = some items or portions uncertain but the judgment is solid. low = photo unclear, items ambiguous, or the comparison hinges on details not visible.",
     },
     score: {
-      type: "integer",
+      type: SchemaType.INTEGER,
       description:
         "Adherence score contribution 0-100. on_protocol: 85-100, partial_deviation: 50-84, off_protocol: 0-49.",
     },
     reason: {
-      type: "string",
+      type: SchemaType.STRING,
       description:
         "One or two plain-language sentences explaining the match result against the protocol rules. Neutral, factual tone. No advice.",
     },
@@ -77,7 +79,6 @@ const RESULT_SCHEMA = {
     "score",
     "reason",
   ],
-  additionalProperties: false,
 };
 
 function buildSystemPrompt() {
@@ -117,38 +118,32 @@ function protocolToText(protocol) {
 }
 
 function hasCredentials() {
-  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+  return Boolean(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
 }
 
-async function analyzeWithClaude({ imageBase64, mediaType, note, protocol }) {
-  const client = new Anthropic();
-  const content = [
-    {
-      type: "image",
-      source: { type: "base64", media_type: mediaType || "image/jpeg", data: imageBase64 },
+async function analyzeWithGemini({ imageBase64, mediaType, note, protocol }) {
+  const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+  const model = client.getGenerativeModel({
+    model: GEMINI_MODEL,
+    systemInstruction: buildSystemPrompt(),
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: RESULT_SCHEMA,
     },
-    {
-      type: "text",
-      text: [
-        protocolToText(protocol),
-        note ? `Participant note (optional, self-reported): ${note}` : "Participant provided no note.",
-        "Analyze the meal photo against this protocol and return the structured result.",
-      ].join("\n\n"),
-    },
-  ];
-
-  const response = await client.messages.create({
-    model: MODEL,
-    max_tokens: 2048,
-    system: buildSystemPrompt(),
-    messages: [{ role: "user", content }],
-    output_config: { format: { type: "json_schema", schema: RESULT_SCHEMA } },
   });
 
-  if (response.stop_reason === "refusal") {
-    throw new Error("Model declined to analyze this image.");
-  }
-  const text = response.content.find((b) => b.type === "text")?.text;
+  const promptText = [
+    protocolToText(protocol),
+    note ? `Participant note (optional, self-reported): ${note}` : "Participant provided no note.",
+    "Analyze the meal photo against this protocol and return the structured result.",
+  ].join("\n\n");
+
+  const response = await model.generateContent([
+    { inlineData: { mimeType: mediaType || "image/jpeg", data: imageBase64 } },
+    { text: promptText },
+  ]);
+
+  const text = response.response.text();
   if (!text) throw new Error("Empty model response.");
   return JSON.parse(text);
 }
@@ -275,10 +270,10 @@ export async function analyzeMeal(payload) {
 
   if (hasCredentials()) {
     try {
-      const result = await analyzeWithClaude(payload);
-      return { engine: "claude", result };
+      const result = await analyzeWithGemini(payload);
+      return { engine: "gemini", result };
     } catch (err) {
-      console.warn("[trewel] Claude analysis failed, using simulated analyzer:", err?.message);
+      console.warn("[trewel] Gemini analysis failed, using simulated analyzer:", err?.message);
       return { engine: "simulated", result: simulateAnalysis(payload) };
     }
   }

@@ -99,7 +99,7 @@ export function buildRedcapDictionary() {
     f("reviewed_by", "text", "Reviewer"),
     f("ai_reason", "notes", "AI protocol-match explanation"),
     f("participant_note", "notes", "Participant note"),
-    f("analysis_engine", "text", "Analysis engine", "", "claude = live multimodal AI; simulated/seeded = demo analyzer."),
+    f("analysis_engine", "text", "Analysis engine", "", "gemini = live multimodal AI; simulated/seeded = demo analyzer."),
   ];
   return toCsv(rows);
 }

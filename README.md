@@ -15,15 +15,19 @@ npm install
 npm run dev          # → http://localhost:5173 (or the port Vite prints)
 ```
 
-**Live AI analysis (optional).** If `ANTHROPIC_API_KEY` is set in the environment when the dev
-server starts, meal photos are analyzed by a real multimodal Claude call (`claude-opus-4-8`,
-vision + JSON-schema structured output). Without a key, an offline **simulated analyzer** keeps
-the full demo flow working, and every simulated assessment is labeled as such in the UI.
+**Live AI analysis (optional).** If `GEMINI_API_KEY` is set in the environment when the dev
+server starts, meal photos are analyzed by a real multimodal Gemini call (`gemini-2.0-flash`,
+vision + JSON-schema structured output). Gemini's free tier requires no billing — get a key at
+https://aistudio.google.com/apikey. Without a key, an offline **simulated analyzer** keeps the
+full demo flow working, and every simulated assessment is labeled as such in the UI.
 
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-...   # optional
+export GEMINI_API_KEY=...   # optional — from https://aistudio.google.com/apikey
 npm run dev
 ```
+
+For local persistence across restarts, put the same line in a `.env` file instead (already
+gitignored). On Vercel, add `GEMINI_API_KEY` under Project Settings → Environment Variables.
 
 ## Trust & safety layer
 
