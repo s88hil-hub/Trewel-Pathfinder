@@ -2,18 +2,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { STATUS_META, CONFIDENCE_META, mealIsPending } from "../lib/adherence.js";
 import { SpecimenPhoto } from "./verification.jsx";
 import { useStore } from "../lib/store.jsx";
+import trewelLogo from "../assets/trewel-logo.png";
+import trewelMark from "../assets/trewel-mark.png";
 
 /* ------------------------------------------------------------------ */
-/* Reticle glyph — a registration mark: the emblem of verification     */
+/* Reticle glyph — the verification mark, used standalone (e.g. as a   */
+/* loading/empty-state accent) separately from the header wordmark     */
 /* ------------------------------------------------------------------ */
-export function Reticle({ size = 22, color = "var(--accent)" }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <circle cx="16" cy="16" r="10.5" fill="none" stroke={color} strokeWidth="2" />
-      <path d="M16 1.5v8M16 22.5v8M1.5 16h8M22.5 16h8" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <circle cx="16" cy="16" r="2.4" fill={color} />
-    </svg>
-  );
+export function Reticle({ size = 22 }) {
+  return <img src={trewelMark} alt="" width={size} height={size} aria-hidden="true" style={{ display: "block" }} />;
 }
 
 /* ------------------------------------------------------------------ */
@@ -22,11 +19,8 @@ export function Reticle({ size = 22, color = "var(--accent)" }) {
 export function Wordmark({ sub }) {
   return (
     <Link to="/" className="wordmark" aria-label="Trewel home">
-      <Reticle />
-      <span>
-        <span className="wordmark-text">Trewel</span>
-        {sub ? <span className="wordmark-sub">{sub}</span> : null}
-      </span>
+      <img src={trewelLogo} alt="Trewel" className="wordmark-logo" />
+      {sub ? <span className="wordmark-sub">{sub}</span> : null}
     </Link>
   );
 }

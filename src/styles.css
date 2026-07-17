@@ -145,16 +145,15 @@ h3 { font-size: 16px; }
 /* wordmark */
 .wordmark { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); }
 .wordmark:hover { text-decoration: none; }
-.wordmark-text {
-  font-family: var(--font-display);
-  font-size: 21px; font-weight: 700; letter-spacing: 0.005em; color: var(--ink);
-  line-height: 1;
+.wordmark-logo {
+  display: block;
+  height: 28px;
+  width: auto;
 }
 .wordmark-sub {
-  display: block;
   font-family: var(--font-mono);
   font-size: 8.5px; letter-spacing: 0.18em; text-transform: uppercase;
-  color: var(--ink-muted); margin-top: 3px;
+  color: var(--ink-muted);
 }
 
 /* ------------------------------------------------------------------ */
