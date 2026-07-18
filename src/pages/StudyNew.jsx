@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Layout, ResearcherNav } from "../components/ui.jsx";
-import { useStore } from "../lib/store.jsx";
-import { PROTOCOL_LIBRARY, makeTemplateId } from "../lib/protocolTemplates.js";
+import { Layout, ResearcherNav, useLingo } from "../components/ui.jsx";
+import { useWorkspace } from "../lib/store.jsx";
+import { PROTOCOL_LIBRARY, CONDITION_LIBRARY, makeTemplateId } from "../lib/protocolTemplates.js";
 import { downloadFile } from "../lib/exports.js";
 
 function TagInput({ id, value, onChange, placeholder }) {
@@ -50,8 +50,11 @@ const EMPTY_FORM = {
 };
 
 export default function StudyNew() {
-  const { createStudy } = useStore();
+  const { data, createStudy } = useWorkspace();
   const navigate = useNavigate();
+  const lingo = useLingo();
+  const researchMode = data.settings.researchMode;
+  const LIBRARY = researchMode ? PROTOCOL_LIBRARY : CONDITION_LIBRARY;
 
   const [name, setName] = useState("");
   const [codePrefix, setCodePrefix] = useState("");
@@ -123,6 +126,7 @@ export default function StudyNew() {
     e.preventDefault();
     const id = createStudy({
       name: name.trim(),
+      surface: researchMode ? "research" : "care",
       description: description.trim(),
       codePrefix: (codePrefix.trim() || name.trim().slice(0, 5)).toUpperCase().replace(/[^A-Z0-9]/g, "") || "TRW",
       protocol: buildProtocol(),
@@ -144,23 +148,24 @@ export default function StudyNew() {
   }
 
   return (
-    <Layout narrow context="Researcher console" headerRight={<ResearcherNav />}>
-      <h1>Create study</h1>
+    <Layout narrow context={lingo.console} headerRight={<ResearcherNav />}>
+      <h1>Create {lingo.planLower === "study" ? "study" : "care plan"}</h1>
       <p className="muted small">
-        Define the diet protocol as structured rules — the AI meal-matcher scores every photo against
-        exactly these rules — and pre-write the messages participants see when a meal deviates.
+        Define the plan as structured rules — every meal photo is checked against exactly these rules,
+        rule by rule — and pre-write the messages your {lingo.clientsLower} see when a meal deviates.
+        Start from a condition template or build your own from scratch.
       </p>
 
       <form onSubmit={submit}>
         <div className="card">
-          <div className="card-kicker">Start from a protocol template</div>
+          <div className="card-kicker">{researchMode ? "Start from a protocol template" : "Start from a condition"}</div>
           <div className="template-picker">
             <button type="button"
               className={`template-chip${activeTemplate === "blank" ? " template-chip--active" : ""}`}
               onClick={() => applyLibraryTemplate(null)}>
-              Blank protocol
+              Custom plan (from scratch)
             </button>
-            {PROTOCOL_LIBRARY.map((entry) => (
+            {LIBRARY.map((entry) => (
               <button key={entry.id} type="button"
                 className={`template-chip${activeTemplate === entry.id ? " template-chip--active" : ""}`}
                 onClick={() => applyLibraryTemplate(entry)}>
@@ -170,31 +175,31 @@ export default function StudyNew() {
           </div>
           <p className="template-blurb">
             {activeTemplate === "blank"
-              ? "Build every rule yourself."
-              : PROTOCOL_LIBRARY.find((t) => t.id === activeTemplate)?.blurb}
+              ? "Define every rule yourself — excluded foods, macro targets, food-group requirements."
+              : LIBRARY.find((t) => t.id === activeTemplate)?.blurb}
             {" "}Every field stays editable after you pick.
           </p>
         </div>
 
         <div className="card">
-          <div className="card-kicker">Study</div>
+          <div className="card-kicker">{lingo.plan}</div>
           <div className="field">
-            <label htmlFor="s-name">Study name *</label>
+            <label htmlFor="s-name">{lingo.plan} name *</label>
             <input id="s-name" className="input" required value={name} onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. KETO-07 · Ketogenic Diet Adherence Pilot" />
+              placeholder={researchMode ? "e.g. KETO-07 · Ketogenic Diet Adherence Pilot" : "e.g. J. Alvarez · Hypertension plan"} />
           </div>
           <div className="field-row">
             <div className="field">
-              <label htmlFor="s-prefix">Participant code prefix *</label>
+              <label htmlFor="s-prefix">{lingo.client} code prefix *</label>
               <input id="s-prefix" className="input" required value={codePrefix} onChange={(e) => setCodePrefix(e.target.value)}
-                placeholder="e.g. KETO7" maxLength={8} />
-              <div className="hint">Participant IDs look like KETO7-4F7K — no names or emails are collected.</div>
+                placeholder={researchMode ? "e.g. KETO7" : "e.g. HTN"} maxLength={8} />
+              <div className="hint">{lingo.client} codes look like HTN-4F7K — the code is their whole login; no client name or email is stored.</div>
             </div>
           </div>
           <div className="field mb-0">
             <label htmlFor="s-desc">Description</label>
             <textarea id="s-desc" className="textarea" value={description} onChange={(e) => setDescription(e.target.value)}
-              placeholder="Aims, arm, and duration — for your team's reference." />
+              placeholder={researchMode ? "Aims, arm, and duration — for your team's reference." : "Context for you — goals, visit cadence, anything worth remembering."} />
           </div>
         </div>
 
@@ -268,13 +273,13 @@ export default function StudyNew() {
           <div className="card-title-row" style={{ marginBottom: 6 }}>
             <div>
               <div className="card-kicker">Deviation responses</div>
-              <h2 style={{ fontSize: 17 }}>What participants read when a meal deviates</h2>
+              <h2 style={{ fontSize: 17 }}>What your {lingo.clientsLower} read when a meal deviates</h2>
             </div>
             <button type="button" className="btn btn--secondary btn--small" onClick={addResponseTemplate}>+ Add template</button>
           </div>
           <p className="muted small" style={{ marginTop: 0 }}>
-            You write these once; Trewel shows the matching one verbatim. The AI reports the protocol
-            comparison — it never writes its own guidance to participants.
+            You write these once; Trewel shows the matching one verbatim. The AI reports the
+            rule-by-rule comparison — it never writes its own guidance to your {lingo.clientsLower}.
           </p>
           {responseTemplates.map((t) => (
             <div key={t.id} className="rt-row">
@@ -307,15 +312,15 @@ export default function StudyNew() {
           ))}
           {!responseTemplates.length ? (
             <div className="empty" style={{ padding: 20 }}>
-              No templates yet — participants will see only the factual protocol comparison.
-              Pick a protocol template above or add your own message.
+              No templates yet — your {lingo.clientsLower} will see only the factual rule-by-rule comparison.
+              Pick a template above or add your own message.
             </div>
           ) : null}
         </div>
 
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
           <button type="button" className="btn btn--secondary" onClick={exportJson}>Export protocol (JSON)</button>
-          <button type="submit" className="btn">Create study</button>
+          <button type="submit" className="btn">Create {lingo.planLower}</button>
         </div>
       </form>
     </Layout>

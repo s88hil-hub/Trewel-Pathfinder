@@ -1,7 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
 import { STATUS_META, CONFIDENCE_META, mealIsPending } from "../lib/adherence.js";
 import { SpecimenPhoto } from "./verification.jsx";
-import { useStore } from "../lib/store.jsx";
+import { useWorkspace } from "../lib/store.jsx";
+import { useAuth } from "../lib/auth.jsx";
+import { lingoFor } from "../lib/lingo.js";
 import trewelLogo from "../assets/trewel-logo.png";
 import trewelMark from "../assets/trewel-mark.png";
 
@@ -29,27 +31,35 @@ export function Wordmark({ sub }) {
 /* Researcher navigation — consistent across the console               */
 /* ------------------------------------------------------------------ */
 export function ResearcherNav({ active }) {
-  const { data } = useStore();
+  const { data } = useWorkspace();
+  const { logout } = useAuth();
   const navigate = useNavigate();
+  const lingo = lingoFor(data.settings.researchMode);
   const pending = Object.values(data.participants).reduce(
     (n, p) => n + p.meals.filter(mealIsPending).length, 0
   );
   const cls = (k) => `header-link${active === k ? " header-link--active" : ""}`;
   function signOut() {
-    sessionStorage.removeItem("trewel-researcher");
-    sessionStorage.removeItem("trewel-researcher-email");
+    logout();
     navigate("/");
   }
   return (
-    <nav className="header-nav" aria-label="Researcher console">
-      <Link className={cls("studies")} to="/researcher/dashboard">Studies</Link>
+    <nav className="header-nav" aria-label={lingo.console}>
+      <Link className={cls("studies")} to="/researcher/dashboard">{lingo.plans}</Link>
       <Link className={cls("review")} to="/researcher/review">
         Review queue{pending > 0 ? <span className="nav-badge">{pending}</span> : null}
       </Link>
-      <Link className={cls("data")} to="/researcher/data-handling">Data handling</Link>
+      <Link className={cls("data")} to="/researcher/data-handling">{lingo.privacy}</Link>
+      <Link className={cls("settings")} to="/researcher/settings">Settings</Link>
       <button className="btn btn--ghost" style={{ fontSize: 13.5 }} onClick={signOut}>Sign out</button>
     </nav>
   );
+}
+
+// Practitioner-facing lingo helper for pages.
+export function useLingo() {
+  const { data } = useWorkspace();
+  return lingoFor(data.settings.researchMode);
 }
 
 /* ------------------------------------------------------------------ */
@@ -81,11 +91,12 @@ export function DataHandlingFooter() {
           <path d="M5.6 8l1.7 1.7L10.6 6" fill="none" stroke="var(--ink-muted)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         <span>
-          <strong>Data handling.</strong> Trewel is a research prototype. All study data — including meal
-          photos — stays in this browser for demonstration and is transmitted only for automated meal
-          analysis. Running an actual trial on Trewel requires IRB approval and institutional data-use
-          agreements covering photo capture, storage, and retention. Automated assessments support research
-          logging only; they are not medical or dietary advice.
+          <strong>Privacy.</strong> Trewel is a prototype. All plan and meal data — including photos —
+          stays in this browser for demonstration and is transmitted only for automated meal analysis.
+          Production deployment in a clinic or trial requires the appropriate data agreements (HIPAA
+          business-associate or IRB/institutional, depending on setting) covering photo capture, storage,
+          and retention. Automated assessments check adherence to a practitioner-defined plan only; they
+          are not medical or dietary advice.
         </span>
       </div>
     </footer>
@@ -234,12 +245,30 @@ export function PlatePlaceholder({ seed = 0, size = "100%" }) {
 /* ------------------------------------------------------------------ */
 /* Team message — researcher-authored template, never AI-generated     */
 /* ------------------------------------------------------------------ */
-export function TeamMessage({ message }) {
+export function TeamMessage({ message, from = "your dietitian" }) {
   if (!message) return null;
   return (
     <div className="team-message">
-      <div className="team-message-kicker">From your study team</div>
+      <div className="team-message-kicker">From {from}</div>
       <p>{message}</p>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Rule checks — the differentiator made visible: which plan rule was  */
+/* checked, and what the verdict was. Never just a nutrient readout.   */
+/* ------------------------------------------------------------------ */
+export function RuleChecks({ checks }) {
+  if (!checks?.length) return null;
+  const mark = { pass: "✓", fail: "✗", unclear: "?" };
+  return (
+    <div className="rule-checks">
+      {checks.map((c, i) => (
+        <span key={i} className={`rule-chip rule-chip--${c.result}`}>
+          <span aria-hidden="true">{mark[c.result] || "?"}</span> {c.rule}: {c.detail}
+        </span>
+      ))}
     </div>
   );
 }
@@ -247,7 +276,7 @@ export function TeamMessage({ message }) {
 /* ------------------------------------------------------------------ */
 /* Meal card — one logged meal, photo as a labeled specimen            */
 /* ------------------------------------------------------------------ */
-export function MealCard({ meal, code, teamMessage }) {
+export function MealCard({ meal, code, teamMessage, teamFrom = "your dietitian" }) {
   const t = new Date(meal.timestamp);
   const when = t.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }) +
     " · " + t.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
@@ -295,9 +324,10 @@ export function MealCard({ meal, code, teamMessage }) {
         <div className="meal-items">
           {items.map((it) => `${it.name} (${it.estimated_portion})`).join(" · ") || "No items identified"}
         </div>
+        <RuleChecks checks={meal.result.rule_checks} />
         <div className="meal-reason">{meal.result.reason}</div>
-        {meal.note ? <div className="meal-note">Participant note: “{meal.note}”</div> : null}
-        {teamMessage ? <TeamMessage message={teamMessage} /> : null}
+        {meal.note ? <div className="meal-note">Note: “{meal.note}”</div> : null}
+        {teamMessage ? <TeamMessage message={teamMessage} from={teamFrom} /> : null}
       </div>
     </div>
   );

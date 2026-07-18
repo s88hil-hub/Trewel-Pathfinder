@@ -49,6 +49,26 @@ const RESULT_SCHEMA = {
         required: ["name", "estimated_portion"],
       },
     },
+    rule_checks: {
+      type: SchemaType.ARRAY,
+      description:
+        "One entry per explicit protocol rule, in this order when present: energy range, sodium limit, excluded foods, limited food groups, emphasized food groups.",
+      items: {
+        type: SchemaType.OBJECT,
+        properties: {
+          rule: {
+            type: SchemaType.STRING,
+            description: "Short rule name, e.g. 'Sodium limit' or 'Excluded foods'.",
+          },
+          result: { type: SchemaType.STRING, enum: ["pass", "fail", "unclear"] },
+          detail: {
+            type: SchemaType.STRING,
+            description: "Very short factual outcome, e.g. 'within range' or 'processed meat detected'.",
+          },
+        },
+        required: ["rule", "result", "detail"],
+      },
+    },
     match_status: {
       type: SchemaType.STRING,
       enum: ["on_protocol", "partial_deviation", "off_protocol"],
@@ -74,6 +94,7 @@ const RESULT_SCHEMA = {
     "is_food_photo",
     "privacy_flag",
     "identified_items",
+    "rule_checks",
     "match_status",
     "confidence",
     "score",
@@ -89,6 +110,7 @@ function buildSystemPrompt() {
     "Scoring: on_protocol (85-100) = meal is consistent with the protocol; partial_deviation (50-84) = mostly consistent but includes at least one item or quantity outside the protocol; off_protocol (0-49) = meal is largely inconsistent with the protocol.",
     "If the image is not a food photo, set is_food_photo=false, match_status=off_protocol, score=0, and explain that no meal could be identified.",
     "If the image appears to include people, faces, or identifiable surroundings, set privacy_flag=true (the platform asks participants to photograph the plate only).",
+    "Rule checks: after itemizing the meal and estimating portions, evaluate each explicit protocol rule one by one — energy range, sodium limit, excluded foods, limited food groups, emphasized food groups (only those the protocol actually defines) — and report each as a rule_check with pass, fail, or unclear plus a very short factual detail. The overall match_status must follow from these checks: any excluded-food fail means off_protocol; a limit or range fail with the rest passing means partial_deviation.",
     "Base your assessment only on what is visible plus the participant's optional note. When uncertain about an item, say so in the reason rather than guessing confidently.",
     "Confidence: report high only when the items and the protocol comparison are both clear. Report medium when some items or portions are uncertain but the overall judgment is solid. Report low when the photo is unclear, items are ambiguous, or the comparison hinges on details you cannot see. Use low deliberately — low-confidence matches are routed to a human reviewer instead of being scored automatically, so a truthful 'low' is more valuable than a guessed 'high'.",
   ].join("\n");
@@ -254,11 +276,64 @@ function simulateAnalysis({ imageBase64, note, protocol }) {
     is_food_photo: true,
     privacy_flag: false,
     identified_items: items,
+    rule_checks: simulatedRuleChecks(protocol, { excludedHit, limitedHit, match_status, confidence, h }),
     match_status,
     confidence,
     score,
     reason,
   };
+}
+
+// Deterministic per-rule verdicts, kept consistent with the overall status:
+// on_protocol → every defined rule passes; partial → exactly one limit/range
+// rule fails; off → the excluded-foods rule fails.
+function simulatedRuleChecks(protocol, { excludedHit, limitedHit, match_status, confidence, h }) {
+  const checks = [];
+  const off = match_status === "off_protocol";
+  const partial = match_status === "partial_deviation";
+  let partialUsed = false;
+
+  if (protocol.caloriesPerMealMin || protocol.caloriesPerMealMax) {
+    const fail = partial && !limitedHit && h % 3 === 0 && !partialUsed;
+    if (fail) partialUsed = true;
+    checks.push({
+      rule: "Energy range",
+      result: fail ? "fail" : confidence === "low" ? "unclear" : "pass",
+      detail: fail ? "portion appears above target range" : confidence === "low" ? "portions hard to estimate" : "within target range",
+    });
+  }
+  if (protocol.sodiumLimitMg) {
+    const fail = partial && !limitedHit && !partialUsed;
+    if (fail) partialUsed = true;
+    checks.push({
+      rule: "Sodium limit",
+      result: fail ? "fail" : off ? "unclear" : "pass",
+      detail: fail ? "likely high-sodium item present" : off ? "not assessed — excluded item present" : "no visibly high-sodium items",
+    });
+  }
+  if (protocol.excludedFoods?.length) {
+    checks.push({
+      rule: "Excluded foods",
+      result: off ? "fail" : "pass",
+      detail: off ? `${excludedHit || "excluded item"} detected` : "none detected",
+    });
+  }
+  if (protocol.limit?.length) {
+    const fail = Boolean(limitedHit) || (partial && !partialUsed);
+    checks.push({
+      rule: "Limited food groups",
+      result: fail ? "fail" : "pass",
+      detail: fail ? `${limitedHit || "limited item"} present` : "within plan",
+    });
+  }
+  if (protocol.emphasize?.length) {
+    checks.push({
+      rule: "Emphasized food groups",
+      result: off ? "unclear" : "pass",
+      detail: off ? "meal centered on excluded items" : "meal built around plan foods",
+    });
+  }
+  return checks;
 }
 
 // ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import { StoreProvider } from "./lib/store.jsx";
+import { AuthProvider } from "./lib/auth.jsx";
 // Typefaces: STIX Two Text (scientific-publishing serif, display),
 // IBM Plex Sans (body/UI), IBM Plex Mono (scores, codes, data).
 import "@fontsource/stix-two-text/600.css";
@@ -16,12 +17,23 @@ import "@fontsource/ibm-plex-mono/500.css";
 import "@fontsource/ibm-plex-mono/600.css";
 import "./styles.css";
 
+// PWA: register the (minimal, non-caching) service worker so the app is
+// installable to a phone home screen. Production only — dev behavior and the
+// normal browser experience are unchanged.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
-      <StoreProvider>
-        <App />
-      </StoreProvider>
+      <AuthProvider>
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

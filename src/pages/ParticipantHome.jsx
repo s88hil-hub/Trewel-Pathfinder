@@ -1,7 +1,8 @@
 import { Link, useParams } from "react-router-dom";
 import { Layout, MealCard, StatTile } from "../components/ui.jsx";
 import { AdherenceLineChart } from "../components/charts.jsx";
-import { useStore } from "../lib/store.jsx";
+import { useParticipantLookup } from "../lib/store.jsx";
+import { teamLabelForStudy } from "../lib/lingo.js";
 import { currentAdherence, dailySeries, trendDelta, weekSummary, dayKey, mealIsPending } from "../lib/adherence.js";
 import { findResponseTemplate } from "../lib/protocolTemplates.js";
 
@@ -34,15 +35,16 @@ function reminderTimes(code) {
 
 export default function ParticipantHome() {
   const { code } = useParams();
-  const { data } = useStore();
-  const participant = data.participants[code];
-  const study = participant ? data.studies[participant.studyId] : null;
+  const lookup = useParticipantLookup(code);
+  const participant = lookup?.participant;
+  const study = lookup?.study;
+  const team = teamLabelForStudy(study);
 
   if (!participant || !study) {
     return (
       <Layout narrow context="Participant">
         <div className="empty" style={{ marginTop: 48 }}>
-          That participant code didn't match an active study. <Link to="/participant">Enter your code</Link>
+          That code didn't match an active plan. <Link to="/participant">Enter your code</Link>
         </div>
       </Layout>
     );
@@ -57,13 +59,13 @@ export default function ParticipantHome() {
   const reminders = reminderTimes(code);
 
   return (
-    <Layout narrow context={<>Participant · <span className="code-chip">{participant.code}</span></>}
+    <Layout narrow context={<>Client · <span className="code-chip">{participant.code}</span></>}
       headerRight={<Link className="header-link" to="/participant">Switch code</Link>}>
 
       <div className="section-head">
         <div>
           <div className="card-kicker">{study.name}</div>
-          <h1>Your study dashboard</h1>
+          <h1>{study.surface === "research" ? "Your study dashboard" : "Your plan"}</h1>
         </div>
         <Link to={`/participant/${code}/log`} className="btn btn--lg">
           <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
@@ -89,11 +91,10 @@ export default function ParticipantHome() {
         <p style={{ margin: "2px 0 0", fontSize: 15 }}>
           {week.daysLogged === 0
             ? "No meals logged in the last 7 days yet — your week starts with the next photo."
-            : <>You were on-protocol <strong className="mono">{week.onDays} of {week.daysLogged}</strong> logged
+            : <>You were on-plan <strong className="mono">{week.onDays} of {week.daysLogged}</strong> logged
               days this week, across <strong className="mono">{week.mealCount}</strong> meals.</>}
           {week.pendingCount > 0 ? (
-            <span className="muted"> {week.pendingCount} recent {week.pendingCount === 1 ? "meal is" : "meals are"} with
-            your study team for a quick confirmation — {week.pendingCount === 1 ? "it doesn't" : "they don't"} affect your score yet.</span>
+            <span className="muted"> {week.pendingCount} recent {week.pendingCount === 1 ? "meal is" : "meals are"} with {team} for a quick confirmation — {week.pendingCount === 1 ? "it doesn't" : "they don't"} affect your score yet.</span>
           ) : null}
         </p>
         <div className="week-days" aria-hidden="true">
@@ -108,8 +109,9 @@ export default function ParticipantHome() {
           ))}
         </div>
         <p className="muted small" style={{ margin: "10px 0 0" }}>
-          Complete logging is what makes your study's data trustworthy — days you log matter more than
-          days that look perfect.
+          {study.surface === "research"
+            ? "Complete logging is what makes your study's data trustworthy — days you log matter more than days that look perfect."
+            : "Days you log matter more than days that look perfect — the full picture is what lets " + team + " adjust the plan with you."}
         </p>
       </div>
 
@@ -128,7 +130,7 @@ export default function ParticipantHome() {
 
       <div className="card">
         <div className="card-title-row">
-          <h2>Your assigned protocol</h2>
+          <h2>{study.surface === "research" ? "Your assigned protocol" : "Your plan, in plain language"}</h2>
         </div>
         <p style={{ marginTop: 0, fontSize: 15 }}>{p.summary}</p>
         <div className="protocol-grid">
@@ -139,7 +141,7 @@ export default function ParticipantHome() {
             <div className="protocol-item"><div className="k">Keep to a minimum</div><div className="v">{p.limit.join(", ")}</div></div>
           ) : null}
           {p.excludedFoods?.length ? (
-            <div className="protocol-item"><div className="k">Not part of this study</div><div className="v">{p.excludedFoods.join(", ")}</div></div>
+            <div className="protocol-item"><div className="k">{study.surface === "research" ? "Not part of this study" : "Not part of your plan"}</div><div className="v">{p.excludedFoods.join(", ")}</div></div>
           ) : null}
           {p.sodiumLimitMg ? (
             <div className="protocol-item"><div className="k">Salt / sodium</div><div className="v">Aim under {p.sodiumLimitMg} mg per meal — watch cured meats, canned and fast food</div></div>
@@ -163,7 +165,8 @@ export default function ParticipantHome() {
       <div className="meal-list">
         {meals.map((m) => (
           <MealCard key={m.id} meal={m} code={participant.code}
-            teamMessage={!mealIsPending(m) ? findResponseTemplate(p, m.result)?.message : null} />
+            teamMessage={!mealIsPending(m) ? findResponseTemplate(p, m.result)?.message : null}
+            teamFrom={team} />
         ))}
         {!meals.length ? (
           <div className="empty">

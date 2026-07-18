@@ -143,11 +143,11 @@ No name, email address, or other direct identifier is collected or stored.
 
 ## AI processing
 Meal photos are transmitted to a multimodal AI model solely to compare the meal
-against the study protocol. Low-confidence matches are not scored automatically;
-they are routed to a researcher review queue and count toward adherence only
-after human confirmation or correction. All participant-facing feedback about
-protocol deviations is researcher-pre-authored template text — the AI never
-generates novel dietary guidance.
+against the practitioner-defined plan, rule by rule. Low-confidence matches are
+not scored automatically; they are routed to a human review queue and count
+toward adherence only after confirmation or correction. All client-facing
+feedback about deviations is practitioner-pre-authored template text — the AI
+never generates novel dietary guidance.
 
 ## Storage & retention (prototype configuration)
 - Storage: browser localStorage on the researcher's/participant's own device
@@ -159,7 +159,8 @@ generates novel dietary guidance.
   Data handling panel.
 
 ## Access & audit
-Researcher access requires sign-in; participant access requires a study code.
+Practitioner access requires an authenticated account (email + hashed
+password); client access requires only their invite code.
 The workspace keeps an audit log of study creation, enrollment, review
 decisions, settings changes, and data exports (${(data.audit || []).length} entries to date),
 inspectable in the Data handling panel.
@@ -169,8 +170,10 @@ Study data exports as REDCap-compatible CSV (with data dictionary) and the
 protocol as JSON, for institutional data management.
 
 ---
-*Prototype notice: this summary describes the demonstration build. Deployment in
-an actual trial requires IRB approval and institutional data-use agreements
-covering photo capture, storage, and retention.*
+*Prototype notice: this summary describes the demonstration build. Production
+deployment requires the agreements appropriate to the setting — HIPAA
+business-associate agreements for clinical practice, or IRB approval and
+institutional data-use agreements for research — covering photo capture,
+storage, and retention.*
 `;
 }

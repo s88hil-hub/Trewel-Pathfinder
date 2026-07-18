@@ -1,12 +1,12 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Layout, StatusPill, ResearcherNav } from "../components/ui.jsx";
+import { Layout, StatusPill, ResearcherNav, useLingo } from "../components/ui.jsx";
 import { AdherenceLineChart, Sparkline } from "../components/charts.jsx";
-import { useStore } from "../lib/store.jsx";
+import { useWorkspace } from "../lib/store.jsx";
 import { adherenceFlag, currentAdherence, dailySeries, weeklyRollup, mealIsPending } from "../lib/adherence.js";
 import { buildRedcapCsv, buildRedcapDictionary, downloadFile } from "../lib/exports.js";
 
-function ProtocolCard({ study, participants, onExportLogged }) {
+function ProtocolCard({ study, participants, onExportLogged, research }) {
   const p = study.protocol;
   function exportJson() {
     downloadFile(
@@ -32,13 +32,17 @@ function ProtocolCard({ study, participants, onExportLogged }) {
     <div className="card">
       <div className="card-title-row">
         <div>
-          <div className="card-kicker">Diet protocol</div>
+          <div className="card-kicker">Plan rules</div>
           <h2>{p.dietName}</h2>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button className="btn btn--secondary btn--small" onClick={exportRedcap}>Export data (REDCap CSV)</button>
-          <button className="btn btn--secondary btn--small" onClick={exportDictionary}>Data dictionary</button>
-          <button className="btn btn--secondary btn--small" onClick={exportJson}>Protocol JSON</button>
+          {research ? (
+            <>
+              <button className="btn btn--secondary btn--small" onClick={exportRedcap}>Export data (REDCap CSV)</button>
+              <button className="btn btn--secondary btn--small" onClick={exportDictionary}>Data dictionary</button>
+            </>
+          ) : null}
+          <button className="btn btn--secondary btn--small" onClick={exportJson}>Plan JSON</button>
         </div>
       </div>
       <p className="small" style={{ marginTop: 0 }}>{p.summary}</p>
@@ -74,7 +78,7 @@ function ProtocolCard({ study, participants, onExportLogged }) {
 }
 
 const COLUMNS = [
-  { key: "code", label: "Participant", sortable: true },
+  { key: "code", label: "Code", sortable: true },
   { key: "meals", label: "Meals", sortable: true, num: true },
   { key: "last", label: "Last log", sortable: true },
   { key: "weekly", label: "Weekly avg (4w)", sortable: false },
@@ -88,7 +92,9 @@ const FLAG_ORDER = { critical: 0, serious: 1, warning: 2, good: 3, nodata: 4 };
 export default function StudyDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { data, addParticipant, logAudit } = useStore();
+  const { data, addParticipant, logAudit } = useWorkspace();
+  const lingo = useLingo();
+  const researchMode = data.settings.researchMode;
   const study = data.studies[id];
   const [sort, setSort] = useState({ key: "flag", dir: 1 });
   const [newCode, setNewCode] = useState(null);
@@ -154,17 +160,17 @@ export default function StudyDetail() {
   }
 
   return (
-    <Layout context="Researcher console" headerRight={<ResearcherNav />}>
+    <Layout context={lingo.console} headerRight={<ResearcherNav />}>
       <div className="section-head">
         <div>
-          <div className="card-kicker"><Link to="/researcher/dashboard">← All studies</Link></div>
+          <div className="card-kicker"><Link to="/researcher/dashboard">← All {lingo.plansLower}</Link></div>
           <h1>{study.name}</h1>
           <p className="muted small" style={{ margin: "4px 0 0", maxWidth: 700 }}>{study.description}</p>
         </div>
       </div>
 
       <div className="stat-row">
-        <div className="stat-tile"><div className="stat-label">Participants</div><div className="stat-value">{rows.length}</div></div>
+        <div className="stat-tile"><div className="stat-label">{lingo.clients}</div><div className="stat-value">{rows.length}</div></div>
         <div className="stat-tile"><div className="stat-label">Meals logged</div><div className="stat-value">{allMeals.length}</div></div>
         <div className="stat-tile"><div className="stat-label">Mean adherence (7d)</div><div className="stat-value">{meanAdherence}</div></div>
         <div className="stat-tile">
@@ -195,19 +201,19 @@ export default function StudyDetail() {
         <AdherenceLineChart series={dailySeries(allMeals, 14)} />
       </div>
 
-      <ProtocolCard study={study} participants={data.participants} onExportLogged={logAudit} />
+      <ProtocolCard study={study} participants={data.participants} onExportLogged={logAudit} research={researchMode} />
 
       <div className="section-head">
-        <h2>Participants</h2>
-        <button className="btn" onClick={onAddParticipant}>+ Add participant</button>
+        <h2>{lingo.clients}</h2>
+        <button className="btn" onClick={onAddParticipant}>+ {lingo.enrollVerb}</button>
       </div>
 
       {newCode ? (
         <div className="banner">
           <span>
-            New participant enrolled: <span className="code-chip">{newCode}</span> — share this code (or the
-            join link <span className="code-chip">{window.location.origin}/participant/{newCode}</span>) with the
-            participant. No name or email is stored.
+            New {lingo.clientLower} code: <span className="code-chip">{newCode}</span> — share this code (or the
+            join link <span className="code-chip">{window.location.origin}/participant/{newCode}</span>) with your
+            {" "}{lingo.clientLower}. The code is their whole login; no name or email is stored.
           </span>
         </div>
       ) : null}
@@ -244,7 +250,7 @@ export default function StudyDetail() {
                 );
               })}
               {!sorted.length ? (
-                <tr><td colSpan={COLUMNS.length} className="muted" style={{ textAlign: "center", padding: 24 }}>No participants enrolled yet.</td></tr>
+                <tr><td colSpan={COLUMNS.length} className="muted" style={{ textAlign: "center", padding: 24 }}>No {lingo.clientsLower} yet — generate an invite code above.</td></tr>
               ) : null}
             </tbody>
           </table>

@@ -1,12 +1,38 @@
 # Trewel
 
-**Objective dietary adherence for nutrition research.** Trewel replaces self-reported food
-diaries with AI-verified, protocol-matched photo logging: participants photograph their plate,
-a multimodal AI checks the photo against the researcher-defined diet protocol, and researchers
-get an ongoing, objective adherence score instead of trusting self-report.
+**Plan-adherence verification for nutrition care.** A dietitian (or researcher) defines a care
+plan as structured rules; their client photographs each meal; a multimodal AI checks the photo
+against the plan **rule by rule** — sodium limits, excluded foods, portions — and returns a
+verified adherence score. Anything the AI isn't confident about is routed to the practitioner for
+review instead of going into the data.
 
-Trewel is a **research support / data-collection tool** — it does not diagnose, advise, or treat.
-It logs meals and scores adherence against a protocol the researcher defines.
+Trewel is a **plan-adherence verification tool** — it does not diagnose, advise, or treat. It logs
+meals and checks them against a plan its practitioner defines; it never generates novel dietary
+guidance (client-facing deviation messages are practitioner-pre-authored templates).
+
+## Two audiences, one engine
+
+- **Dietitians & nutritionists (default).** Sign up, build a care plan from a condition template
+  (Type 2 diabetes, PCOS, hypertension/DASH, renal/low-sodium, GERD, IBS/low-FODMAP, weight
+  management) or your own rules, invite clients with a code, and see who's on track at a glance.
+- **Researchers.** Flip **Research mode** on in Settings to restore study/participant terminology
+  and the research toolset (IRB-readiness summary, REDCap CSV export, data dictionary). Nothing is
+  deleted by leaving it off — the research surface sits intact underneath.
+
+## Accounts & data
+
+Practitioners have real accounts (email + PBKDF2-hashed password, 30-day sessions). Each account
+owns an isolated workspace — plans, clients, meal logs, audit trail — persisted in the browser and
+restored on sign-in. Clients need only their invite code (no account, no PII). Demo login:
+`s.chen@university.edu` / `trewel-demo`.
+
+## Install as a phone app (PWA)
+
+Trewel is installable to a phone home screen and launches full-screen. This is purely additive —
+the desktop/browser experience is unchanged.
+
+- **iOS Safari:** open the site → Share → **Add to Home Screen** → Add.
+- **Android Chrome:** open the site → ⋮ menu → **Install app** (or **Add to Home Screen**).
 
 ## Run it
 

@@ -1,16 +1,17 @@
 import { useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Layout, ConfidencePill, TeamMessage } from "../components/ui.jsx";
+import { Layout, ConfidencePill, TeamMessage, RuleChecks } from "../components/ui.jsx";
 import { SpecimenPhoto, ScoreDial, VerdictStamp } from "../components/verification.jsx";
-import { useStore } from "../lib/store.jsx";
+import { useParticipantLookup } from "../lib/store.jsx";
+import { teamLabelForStudy } from "../lib/lingo.js";
 import { preparePhoto, requestMealAnalysis } from "../lib/api.js";
 import { findResponseTemplate } from "../lib/protocolTemplates.js";
 
 export default function LogMeal() {
   const { code } = useParams();
-  const { data, addMeal } = useStore();
-  const participant = data.participants[code];
-  const study = participant ? data.studies[participant.studyId] : null;
+  const lookup = useParticipantLookup(code);
+  const participant = lookup?.participant;
+  const study = lookup?.study;
 
   const fileRef = useRef(null);
   const [photo, setPhoto] = useState(null); // { dataUrl, base64, mediaType }
@@ -24,7 +25,7 @@ export default function LogMeal() {
     return (
       <Layout narrow context="Participant">
         <div className="empty" style={{ marginTop: 48 }}>
-          That participant code didn't match an active study. <Link to="/participant">Enter your code</Link>
+          That code didn't match an active plan. <Link to="/participant">Enter your code</Link>
         </div>
       </Layout>
     );
@@ -60,7 +61,7 @@ export default function LogMeal() {
         engine: res.engine,
         result: res.result,
       };
-      const saved = addMeal(code, meal); // addMeal decides pending vs auto-verified
+      const saved = lookup.addMeal(meal); // store decides pending vs auto-verified
       setSavedMeal(saved);
       setOutcome(res);
       setPhase("done");
@@ -81,7 +82,7 @@ export default function LogMeal() {
   }
 
   return (
-    <Layout narrow context={<>Participant · <span className="code-chip">{code}</span></>}
+    <Layout narrow context={<>Client · <span className="code-chip">{code}</span></>}
       headerRight={<Link className="header-link" to={`/participant/${code}`}>← My log</Link>}>
 
       {phase !== "done" ? (
@@ -95,7 +96,7 @@ export default function LogMeal() {
             </svg>
             <span>
               <strong>Photograph the plate only.</strong> Fill the frame with the food. Keep people,
-              faces, screens, and the room out of the shot — the study needs the meal, nothing else.
+              faces, screens, and the room out of the shot — only the meal gets checked, nothing else.
             </span>
           </div>
 
@@ -135,11 +136,11 @@ export default function LogMeal() {
           {error ? <div className="banner banner--notice">{error}</div> : null}
 
           <button className="btn btn--lg" style={{ width: "100%" }} disabled={!photo || phase === "analyzing"} onClick={submit}>
-            {phase === "analyzing" ? (<><span className="spinner" /> Checking against your protocol…</>) : "Log this meal"}
+            {phase === "analyzing" ? (<><span className="spinner" /> Checking against your plan…</>) : "Log this meal"}
           </button>
           <p className="muted small" style={{ textAlign: "center" }}>
-            Your photo is checked against your study's protocol — nothing else. Research logging, not
-            dietary advice.
+            Your photo is checked against your plan — nothing else. It's a check-in, not a judgment,
+            and never dietary advice.
           </p>
         </>
       ) : (
@@ -153,6 +154,7 @@ export default function LogMeal() {
 /* The verification record — the match-result moment                   */
 /* ------------------------------------------------------------------ */
 function ResultView({ outcome, meal, study, code, onLogAnother }) {
+  const team = teamLabelForStudy(study);
   const r = outcome.result;
   const pending = meal.review?.state === "pending";
   const t = new Date(meal.timestamp);
@@ -181,9 +183,10 @@ function ResultView({ outcome, meal, study, code, onLogAnother }) {
             {pending ? (
               <div className="banner" style={{ marginBottom: 14 }}>
                 <span>
-                  <strong>Your study team will take a quick look.</strong> The matcher wasn't confident
-                  enough to score this one automatically, so a researcher will confirm it. It doesn't
-                  count toward your adherence score until then — nothing you need to do.
+                  <strong>{study.surface === "research" ? "Your study team" : "Your dietitian"} will take a
+                  quick look.</strong> The matcher wasn't confident enough to score this one
+                  automatically, so a person will confirm it. It doesn't count toward your adherence
+                  score until then — nothing you need to do.
                 </span>
               </div>
             ) : null}
@@ -197,9 +200,10 @@ function ResultView({ outcome, meal, study, code, onLogAnother }) {
               ))}
               {!r.identified_items?.length ? <li className="muted">No food items identified</li> : null}
             </ul>
-            <div className="card-kicker">Protocol match</div>
+            <div className="card-kicker">Checked against your plan</div>
+            <RuleChecks checks={r.rule_checks} />
             <p style={{ margin: "6px 0 0", fontSize: 15 }}>{r.reason}</p>
-            {teamMessage ? <TeamMessage message={teamMessage} /> : null}
+            {teamMessage ? <TeamMessage message={teamMessage} from={team} /> : null}
             {r.privacy_flag ? (
               <div className="banner banner--notice" style={{ marginTop: 14, marginBottom: 0 }}>
                 This photo may include people or surroundings. Next time, frame the plate only.
@@ -209,8 +213,8 @@ function ResultView({ outcome, meal, study, code, onLogAnother }) {
         </div>
         <div className="ai-note" style={{ margin: "0 22px 16px", paddingTop: 12 }}>
           {outcome.engine === "simulated" || outcome.engine === "seeded"
-            ? "Demo mode: this record came from Trewel's simulated analyzer (no AI credentials configured). Deviation messages are pre-written by your study team — Trewel never generates its own dietary guidance."
-            : "Checked by Trewel's AI meal-matcher against your study's protocol. Deviation messages are pre-written by your study team — Trewel never generates its own dietary guidance."}
+            ? "Demo mode: this record came from Trewel's simulated analyzer (no AI credentials configured). Deviation messages are pre-written by " + team + " — Trewel never generates its own dietary guidance."
+            : "Checked by Trewel's AI meal-matcher against your plan, rule by rule. Deviation messages are pre-written by " + team + " — Trewel never generates its own dietary guidance."}
         </div>
       </div>
       <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>

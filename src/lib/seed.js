@@ -63,7 +63,34 @@ const DASH_MEALS = {
 const LOW_CONF_SUFFIX =
   " The photo made some items difficult to identify with certainty, so this match is held for reviewer confirmation.";
 
-function makeMeal(rand, ts, bucket, library) {
+function seedRuleChecks(protocol, bucket, rand) {
+  const checks = [];
+  const off = bucket === "off";
+  const partial = bucket === "partial";
+  const partialOnSodium = partial && rand() < 0.5;
+  if (protocol.caloriesPerMealMin || protocol.caloriesPerMealMax) {
+    checks.push({ rule: "Energy range", result: "pass", detail: "within target range" });
+  }
+  if (protocol.sodiumLimitMg) {
+    checks.push(partialOnSodium
+      ? { rule: "Sodium limit", result: "fail", detail: "likely high-sodium item present" }
+      : { rule: "Sodium limit", result: off ? "unclear" : "pass", detail: off ? "not assessed — excluded item present" : "no visibly high-sodium items" });
+  }
+  if (protocol.excludedFoods?.length) {
+    checks.push({ rule: "Excluded foods", result: off ? "fail" : "pass", detail: off ? "excluded item detected" : "none detected" });
+  }
+  if (protocol.limit?.length) {
+    checks.push(partial && !partialOnSodium
+      ? { rule: "Limited food groups", result: "fail", detail: "limited item present" }
+      : { rule: "Limited food groups", result: "pass", detail: "within plan" });
+  }
+  if (protocol.emphasize?.length) {
+    checks.push({ rule: "Emphasized food groups", result: off ? "unclear" : "pass", detail: off ? "meal centered on excluded items" : "meal built around plan foods" });
+  }
+  return checks;
+}
+
+function makeMeal(rand, ts, bucket, library, protocol) {
   let status, score, pool;
   if (bucket === "on") {
     status = "on_protocol"; score = 86 + Math.floor(rand() * 14); pool = library.on;
@@ -109,6 +136,7 @@ function makeMeal(rand, ts, bucket, library) {
       is_food_photo: true,
       privacy_flag: false,
       identified_items: pick.items,
+      rule_checks: seedRuleChecks(protocol, bucket, rand),
       match_status: status,
       confidence,
       score,
@@ -119,7 +147,7 @@ function makeMeal(rand, ts, bucket, library) {
 }
 
 // profile: { base: probability of on-protocol early on, drift: change over time }
-function makeMealHistory(rand, library, profile, days = 14) {
+function makeMealHistory(rand, library, profile, protocol, days = 14) {
   const meals = [];
   const now = Date.now();
   for (let i = days; i >= 1; i--) {
@@ -131,7 +159,7 @@ function makeMealHistory(rand, library, profile, days = 14) {
       const ts = now - i * DAY_MS + (hour + rand() * 1.5) * 3600 * 1000;
       const roll = rand();
       const bucket = roll < pOn ? "on" : roll < pOn + (1 - pOn) * 0.65 ? "partial" : "off";
-      meals.push(makeMeal(rand, Math.floor(ts), bucket, library));
+      meals.push(makeMeal(rand, Math.floor(ts), bucket, library, protocol));
     }
   }
   return meals.sort((a, b) => a.timestamp - b.timestamp);
@@ -145,6 +173,7 @@ export function buildSeedData() {
 
   const medStudy = {
     id: "st_med24",
+    surface: "research",
     name: "MED-24 · Mediterranean Diet Adherence Study",
     description:
       "12-week free-living trial evaluating whether photo-verified adherence scoring improves data quality versus self-reported diaries in a Mediterranean-diet intervention arm.",
@@ -159,6 +188,7 @@ export function buildSeedData() {
 
   const dashStudy = {
     id: "st_ls11",
+    surface: "research",
     name: "LS-11 · Low-Sodium DASH Feasibility Pilot",
     description:
       "4-week feasibility pilot testing photo-based verification of a sodium-restricted DASH-style eating pattern in adults with elevated blood pressure (protocol adherence only — no clinical endpoints).",
@@ -189,7 +219,7 @@ export function buildSeedData() {
       code,
       studyId: medStudy.id,
       joinedAt: now - 15 * DAY_MS,
-      meals: makeMealHistory(rand, MED_MEALS, profile),
+      meals: makeMealHistory(rand, MED_MEALS, profile, medStudy.protocol),
     };
     medStudy.participants.push(code);
   }
@@ -199,7 +229,7 @@ export function buildSeedData() {
       code,
       studyId: dashStudy.id,
       joinedAt: now - 14 * DAY_MS,
-      meals: makeMealHistory(rand, DASH_MEALS, profile),
+      meals: makeMealHistory(rand, DASH_MEALS, profile, dashStudy.protocol),
     };
     dashStudy.participants.push(code);
   }

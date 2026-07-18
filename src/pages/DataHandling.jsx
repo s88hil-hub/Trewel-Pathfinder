@@ -1,12 +1,15 @@
-import { Layout, ResearcherNav } from "../components/ui.jsx";
-import { useStore } from "../lib/store.jsx";
+import { Layout, ResearcherNav, useLingo } from "../components/ui.jsx";
+import { useWorkspace } from "../lib/store.jsx";
 import { buildDataHandlingSummary, downloadFile } from "../lib/exports.js";
 
-// IRB-readiness panel: what Trewel collects, retention/deletion controls,
-// the workspace audit log, and an exportable one-page summary for a
-// compliance office. An intentional part of the product, not a disclaimer.
+// Privacy & compliance panel. Same underlying functionality in both surfaces —
+// collection facts, retention/deletion controls, and the audit log. The
+// framing switches with the workspace mode: HIPAA-oriented for practitioners,
+// IRB-oriented (with the IRB summary export) in Research mode.
 export default function DataHandling() {
-  const { data, updateSettings, logAudit, resetDemo } = useStore();
+  const { data, updateSettings, logAudit, resetWorkspace } = useWorkspace();
+  const lingo = useLingo();
+  const research = data.settings.researchMode;
   const retention = data.settings?.retentionDays ?? 90;
   const audit = [...(data.audit || [])].sort((a, b) => b.ts - a.ts);
 
@@ -16,22 +19,27 @@ export default function DataHandling() {
   }
 
   function deleteAll() {
-    if (confirm("Delete all workspace data and reseed the demo? This clears every study, participant, meal, and audit entry.")) {
-      resetDemo();
+    if (confirm("Delete all workspace data? This clears every plan, client, meal photo, and audit entry.")) {
+      resetWorkspace();
     }
   }
 
   return (
-    <Layout context="Researcher console" headerRight={<ResearcherNav active="data" />}>
+    <Layout context={lingo.console} headerRight={<ResearcherNav active="data" />}>
       <div className="section-head">
         <div>
-          <h1>Data handling</h1>
+          <h1>{research ? "Data handling" : "Privacy & compliance"}</h1>
           <p className="muted small" style={{ margin: "4px 0 0", maxWidth: 640 }}>
-            Everything your IRB or compliance office will ask about, in one place — what Trewel
-            collects, how long it keeps it, and who has touched it.
+            {research
+              ? "Everything your IRB or compliance office will ask about, in one place — what Trewel collects, how long it keeps it, and who has touched it."
+              : "What Trewel collects about your clients, how long it's kept, and a complete log of who accessed what — the questions a HIPAA compliance review asks first."}
           </p>
         </div>
-        <button className="btn" onClick={exportSummary}>Download IRB summary (MD)</button>
+        {research ? (
+          <button className="btn" onClick={exportSummary}>Download IRB summary (MD)</button>
+        ) : (
+          <button className="btn btn--secondary" onClick={exportSummary}>Download data-practices summary</button>
+        )}
       </div>
 
       <div className="card">
@@ -40,13 +48,16 @@ export default function DataHandling() {
           <div className="dh-fact"><div className="k">Meal photos</div>Collected — plate only, by instruction</div>
           <div className="dh-fact"><div className="k">Timestamps</div>Collected — local device time</div>
           <div className="dh-fact"><div className="k">AI match results</div>Collected — status, confidence, score</div>
-          <div className="dh-fact"><div className="k">Participant notes</div>Optional free text</div>
+          <div className="dh-fact"><div className="k">{lingo.client} notes</div>Optional free text</div>
           <div className="dh-fact"><div className="k">Names / emails</div>Not collected — codes only</div>
           <div className="dh-fact"><div className="k">Location</div>Not collected</div>
         </div>
         <p className="muted small" style={{ marginBottom: 0 }}>
-          Participant-facing deviation messages are researcher-pre-authored templates. The AI compares
-          meals against the protocol; it never generates its own dietary guidance.
+          {lingo.client}-facing deviation messages are practitioner-pre-authored templates. The AI compares
+          meals against the plan; it never generates its own dietary guidance.
+          {!research
+            ? " Identifying clients by code only keeps PHI out of Trewel by design — the code-to-person mapping lives in your own records."
+            : ""}
         </p>
       </div>
 
@@ -58,7 +69,7 @@ export default function DataHandling() {
           </div>
         </div>
         <div className="field" style={{ maxWidth: 380 }}>
-          <label htmlFor="retention">Retain study data after study close</label>
+          <label htmlFor="retention">Retain {lingo.planLower} data after close</label>
           <select id="retention" className="input" value={retention}
             onChange={(e) => updateSettings({ retentionDays: Number(e.target.value) })}>
             <option value={30}>30 days, then delete</option>
@@ -67,21 +78,21 @@ export default function DataHandling() {
             <option value={365}>365 days, then delete</option>
           </select>
           <div className="hint">
-            Prototype setting — recorded in the audit log and the IRB summary. In production this
-            drives automatic deletion under your institution's data-use agreement.
+            Prototype setting — recorded in the audit log and the exported summary. In production this
+            drives automatic deletion under your {research ? "institution's data-use agreement" : "practice's retention policy"}.
           </div>
         </div>
         <hr className="divider" />
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <button className="btn btn--secondary" onClick={deleteAll}>Delete all workspace data now</button>
-          <span className="muted small">Clears every study, participant, meal photo, and audit entry, then reseeds the demo.</span>
+          <span className="muted small">Clears every {lingo.planLower}, {lingo.clientLower}, meal photo, and audit entry.</span>
         </div>
       </div>
 
       <div className="card">
         <div className="card-title-row">
           <div>
-            <div className="card-kicker">Audit log</div>
+            <div className="card-kicker">{research ? "Audit log" : "Access log"}</div>
             <h2>Who did what, when</h2>
           </div>
           <span className="kicker">{audit.length} entries</span>
@@ -110,10 +121,17 @@ export default function DataHandling() {
           </table>
         </div>
         <p className="muted small" style={{ marginBottom: 0 }}>
-          Logged automatically: sign-ins, study creation, enrollment, review decisions, settings
-          changes, exports, and deletions.
+          Logged automatically: sign-ins, {lingo.planLower} creation, {lingo.clientLower} enrollment, review
+          decisions, settings changes, exports, and deletions.
         </p>
       </div>
+
+      {!research ? (
+        <p className="muted small" style={{ marginTop: 16 }}>
+          Running a formal study? Research mode (IRB summary, REDCap export, data dictionary) can be
+          switched on in <a href="/researcher/settings">Settings</a> — nothing is lost by leaving it off.
+        </p>
+      ) : null}
     </Layout>
   );
 }

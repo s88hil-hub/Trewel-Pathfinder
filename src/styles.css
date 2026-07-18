@@ -611,6 +611,46 @@ td.num { font-family: var(--font-mono); font-size: 13.5px; }
   border-radius: 2px; padding: 6px 12px;
 }
 
+/* rule checks — per-rule verdicts on every meal result */
+.rule-checks { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0 6px; }
+.rule-chip {
+  display: inline-flex; align-items: baseline; gap: 5px;
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.03em;
+  padding: 2px 8px; border-radius: 2px; border: 1px solid var(--rule);
+  background: var(--surface-bright); color: var(--ink-2);
+}
+.rule-chip span { font-weight: 700; }
+.rule-chip--pass span { color: var(--verified-text); }
+.rule-chip--fail { border-color: rgba(172, 58, 44, 0.45); color: var(--off-text); background: rgba(172, 58, 44, 0.05); }
+.rule-chip--fail span { color: var(--off-text); }
+.rule-chip--unclear { border-style: dashed; color: var(--deviation-text); }
+.rule-chip--unclear span { color: var(--deviation-text); }
+
+/* onboarding checklist */
+.onboard-steps { display: flex; flex-direction: column; gap: 0; margin-top: 6px; }
+.onboard-step {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 4px; border-bottom: 1px solid var(--rule);
+}
+.onboard-step:last-child { border-bottom: none; }
+.onboard-num {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--rule-strong); color: var(--ink-2);
+}
+.onboard-step--done .onboard-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+.onboard-step--done .onboard-label { color: var(--ink-muted); text-decoration: line-through; }
+.onboard-label { font-size: 14.5px; font-weight: 600; }
+.onboard-hint { font-size: 12.5px; color: var(--ink-muted); }
+
+/* settings toggle row */
+.toggle-row {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 14px 0; border-bottom: 1px solid var(--rule);
+}
+.toggle-row:last-child { border-bottom: none; }
+
 /* responsive */
 @media (max-width: 720px) {
   .app-main { padding: 22px 16px 44px; }

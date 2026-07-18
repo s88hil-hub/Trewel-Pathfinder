@@ -6,16 +6,16 @@ export default function Landing() {
   return (
     <Layout>
       <div className="landing-hero">
-        <div className="landing-kicker">Dietary adherence · Verified</div>
+        <div className="landing-kicker">Plan adherence · Verified</div>
         <h1>
-          Nutrition trials run on self-report.
+          Know your clients followed the plan —
           <br />
-          Trewel runs on <em>evidence</em>.
+          not just <em>what they ate</em>.
         </h1>
         <p>
-          Participants photograph each meal. Trewel's AI matcher checks the photo against the diet
-          protocol you defined and returns an objective adherence score — meal by meal, day by day,
-          for the length of your study.
+          Your client photographs each meal. Trewel checks the photo against the plan you wrote —
+          rule by rule: sodium limits, excluded foods, portions — and returns a verified adherence
+          score. Anything the AI isn't sure about goes to you, not into the data.
         </p>
       </div>
 
@@ -36,13 +36,13 @@ export default function Landing() {
             <path d="M7.5 16.5l4-4.5 3.5 3 5-6" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M10 24.5h8" stroke="var(--ink)" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
-          <h2>Researcher console</h2>
+          <h2>Practitioner console</h2>
           <p>
-            Define diet protocols as structured, exportable rules. Enroll participants under anonymous
-            codes. Read adherence at a glance — daily and weekly rollups, with flags on anyone
-            trending off-protocol.
+            For dietitians and nutritionists: build a care plan from condition templates (diabetes,
+            hypertension, low-FODMAP…) or your own rules, invite clients with a code, and see who's
+            on track at a glance. Running a formal trial? Research mode is one toggle away.
           </p>
-          <span className="go">Open the console →</span>
+          <span className="go">Sign in or create an account →</span>
         </Link>
 
         <Link to="/participant" className="role-card">
@@ -51,18 +51,19 @@ export default function Landing() {
             <circle cx="14" cy="13" r="4.5" fill="none" stroke="var(--accent)" strokeWidth="1.8" />
             <circle cx="14" cy="13" r="1.5" fill="var(--accent)" />
           </svg>
-          <h2>Participant logging</h2>
+          <h2>Client logging</h2>
           <p>
-            Enter your study code, read your protocol in plain language, and log each meal with one
-            photo. You see the match result the moment it's checked.
+            Got a code from your dietitian or study coordinator? Read your plan in plain language and
+            log each meal with one photo. You see the check the moment it lands — no account, no forms.
           </p>
           <span className="go">Enter your code →</span>
         </Link>
       </div>
 
       <p className="muted small" style={{ textAlign: "center", marginTop: 40 }}>
-        Trewel is a research support and data-collection tool. It does not diagnose, treat, or give
-        dietary advice — it logs meals and scores adherence against a researcher-defined protocol.
+        Trewel is a plan-adherence verification tool for nutrition professionals and researchers. It
+        does not diagnose, treat, or give dietary advice — it logs meals and checks them against a
+        plan its practitioner defined.
       </p>
     </Layout>
   );

@@ -1,21 +1,22 @@
 import { Link, useParams } from "react-router-dom";
-import { Layout, StatusPill, MealCard, StatTile, ResearcherNav } from "../components/ui.jsx";
+import { Layout, StatusPill, MealCard, StatTile, ResearcherNav, useLingo } from "../components/ui.jsx";
 import { AdherenceLineChart, WeeklyBars } from "../components/charts.jsx";
-import { useStore } from "../lib/store.jsx";
+import { useWorkspace } from "../lib/store.jsx";
 import { adherenceFlag, dailySeries, weeklyRollup } from "../lib/adherence.js";
 
 // Researcher view of a single participant: meal-by-meal log with photos
 // and match results, plus daily/weekly adherence rollups.
 export default function ParticipantDetail() {
   const { id, code } = useParams();
-  const { data } = useStore();
+  const { data } = useWorkspace();
+  const lingo = useLingo();
   const study = data.studies[id];
   const participant = data.participants[code];
 
   if (!study || !participant) {
     return (
-      <Layout context="Researcher console">
-        <div className="empty">Participant not found. <Link to="/researcher/dashboard">Back to studies</Link></div>
+      <Layout context={lingo.console}>
+        <div className="empty">{lingo.client} not found. <Link to="/researcher/dashboard">Back to {lingo.plansLower}</Link></div>
       </Layout>
     );
   }
@@ -24,7 +25,7 @@ export default function ParticipantDetail() {
   const meals = [...participant.meals].sort((a, b) => b.timestamp - a.timestamp);
 
   return (
-    <Layout context="Researcher console" headerRight={<ResearcherNav />}>
+    <Layout context={lingo.console} headerRight={<ResearcherNav />}>
       <div className="section-head">
         <div>
           <div className="card-kicker"><Link to={`/researcher/studies/${id}`}>← {study.name}</Link></div>

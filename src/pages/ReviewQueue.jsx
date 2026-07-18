@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { Layout, ResearcherNav, MatchPill, ConfidencePill, PlatePlaceholder } from "../components/ui.jsx";
+import { Layout, ResearcherNav, MatchPill, ConfidencePill, PlatePlaceholder, RuleChecks, useLingo } from "../components/ui.jsx";
 import { SpecimenPhoto } from "../components/verification.jsx";
-import { useStore } from "../lib/store.jsx";
+import { useWorkspace } from "../lib/store.jsx";
 import { mealIsPending, STATUS_META, reviewStats } from "../lib/adherence.js";
 
 const ALL_STATUSES = ["on_protocol", "partial_deviation", "off_protocol"];
@@ -10,7 +10,8 @@ const ALL_STATUSES = ["on_protocol", "partial_deviation", "off_protocol"];
 // decision. Confirming or correcting immediately updates the participant's
 // real adherence score and clears the item.
 export default function ReviewQueue() {
-  const { data, reviewMeal } = useStore();
+  const { data, reviewMeal } = useWorkspace();
+  const lingo = useLingo();
 
   const items = [];
   for (const p of Object.values(data.participants)) {
@@ -25,7 +26,7 @@ export default function ReviewQueue() {
   const stats = reviewStats(allMeals);
 
   return (
-    <Layout context="Researcher console" headerRight={<ResearcherNav active="review" />}>
+    <Layout context={lingo.console} headerRight={<ResearcherNav active="review" />}>
       <div className="section-head">
         <div>
           <h1>Review queue</h1>
@@ -40,7 +41,7 @@ export default function ReviewQueue() {
       {!items.length ? (
         <div className="empty">
           Queue clear — every recent meal was matched confidently.
-          {" "}<Link to="/researcher/dashboard">Back to studies</Link>
+          {" "}<Link to="/researcher/dashboard">Back to {lingo.plansLower}</Link>
         </div>
       ) : (
         <div className="meal-list">
@@ -90,6 +91,7 @@ function QueueCard({ participant, study, meal, onDecide }) {
         <div className="meal-items">
           {items.map((it) => `${it.name} (${it.estimated_portion})`).join(" · ") || "No items identified"}
         </div>
+        <RuleChecks checks={meal.result.rule_checks} />
         <div className="meal-reason">{meal.result.reason}</div>
         {meal.note ? <div className="meal-note">Participant note: “{meal.note}”</div> : null}
         <div className="queue-actions">
