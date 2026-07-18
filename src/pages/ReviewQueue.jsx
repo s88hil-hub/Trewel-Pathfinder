@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Layout, ResearcherNav, MatchPill, ConfidencePill, PlatePlaceholder, RuleChecks, useLingo } from "../components/ui.jsx";
+import { Layout, ResearcherNav, MatchPill, ConfidencePill, PlatePlaceholder, RuleChecks, useLingo, usePendingCount, practitionerTabs } from "../components/ui.jsx";
 import { SpecimenPhoto } from "../components/verification.jsx";
 import { useWorkspace } from "../lib/store.jsx";
 import { mealIsPending, STATUS_META, reviewStats } from "../lib/adherence.js";
@@ -12,6 +12,7 @@ const ALL_STATUSES = ["on_protocol", "partial_deviation", "off_protocol"];
 export default function ReviewQueue() {
   const { data, reviewMeal } = useWorkspace();
   const lingo = useLingo();
+  const pending = usePendingCount();
 
   const items = [];
   for (const p of Object.values(data.participants)) {
@@ -26,7 +27,8 @@ export default function ReviewQueue() {
   const stats = reviewStats(allMeals);
 
   return (
-    <Layout context={lingo.console} headerRight={<ResearcherNav active="review" />}>
+    <Layout context={lingo.console} headerRight={<ResearcherNav active="review" />}
+      tabs={practitionerTabs(lingo, pending)}>
       <div className="section-head">
         <div>
           <h1>Review queue</h1>

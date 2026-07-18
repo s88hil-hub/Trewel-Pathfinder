@@ -43,3 +43,29 @@ export async function requestMealAnalysis({ base64, mediaType, note, protocol })
   }
   return res.json();
 }
+
+// ---------------------------------------------------------------------------
+// Waitlist — persistent, server-stored signups (see server/waitlist.mjs).
+// ---------------------------------------------------------------------------
+export async function joinWaitlist(email) {
+  const res = await fetch("/api/waitlist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.ok === false) {
+    throw new Error(body.error || "Couldn't add you to the list. Please try again.");
+  }
+  return body; // { ok, duplicate, total }
+}
+
+export async function getWaitlistCount() {
+  try {
+    const res = await fetch("/api/waitlist");
+    const body = await res.json();
+    return body.total ?? 0;
+  } catch {
+    return 0;
+  }
+}

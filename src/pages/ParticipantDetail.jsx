@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { Layout, StatusPill, MealCard, StatTile, ResearcherNav, useLingo } from "../components/ui.jsx";
+import { Layout, StatusPill, MealCard, StatTile, ResearcherNav, useLingo, usePendingCount, practitionerTabs } from "../components/ui.jsx";
 import { AdherenceLineChart, WeeklyBars } from "../components/charts.jsx";
 import { useWorkspace } from "../lib/store.jsx";
 import { adherenceFlag, dailySeries, weeklyRollup } from "../lib/adherence.js";
@@ -10,6 +10,7 @@ export default function ParticipantDetail() {
   const { id, code } = useParams();
   const { data } = useWorkspace();
   const lingo = useLingo();
+  const pending = usePendingCount();
   const study = data.studies[id];
   const participant = data.participants[code];
 
@@ -25,7 +26,7 @@ export default function ParticipantDetail() {
   const meals = [...participant.meals].sort((a, b) => b.timestamp - a.timestamp);
 
   return (
-    <Layout context={lingo.console} headerRight={<ResearcherNav />}>
+    <Layout context={lingo.console} headerRight={<ResearcherNav />} tabs={practitionerTabs(lingo, pending)}>
       <div className="section-head">
         <div>
           <div className="card-kicker"><Link to={`/researcher/studies/${id}`}>← {study.name}</Link></div>

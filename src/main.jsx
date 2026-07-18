@@ -37,3 +37,15 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </BrowserRouter>
   </React.StrictMode>
 );
+
+// Fade out the PWA launch splash once the app has mounted. (In a normal browser
+// tab the splash is display:none via CSS, so this is a harmless no-op there.)
+const splash = document.getElementById("pwa-splash");
+if (splash) {
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      splash.classList.add("hide");
+      setTimeout(() => splash.remove(), 500);
+    }, 450);
+  });
+}

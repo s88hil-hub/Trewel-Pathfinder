@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { Layout, ConfidencePill, TeamMessage, RuleChecks } from "../components/ui.jsx";
+import { Layout, ConfidencePill, TeamMessage, RuleChecks, clientTabs } from "../components/ui.jsx";
 import { SpecimenPhoto, ScoreDial, VerdictStamp } from "../components/verification.jsx";
 import { useParticipantLookup } from "../lib/store.jsx";
 import { teamLabelForStudy } from "../lib/lingo.js";
@@ -16,6 +16,7 @@ export default function LogMeal() {
   const fileRef = useRef(null);
   const [photo, setPhoto] = useState(null); // { dataUrl, base64, mediaType }
   const [note, setNote] = useState("");
+  const [showNote, setShowNote] = useState(false);
   const [phase, setPhase] = useState("compose"); // compose | analyzing | done
   const [outcome, setOutcome] = useState(null); // { engine, result }
   const [savedMeal, setSavedMeal] = useState(null);
@@ -23,7 +24,7 @@ export default function LogMeal() {
 
   if (!participant || !study) {
     return (
-      <Layout narrow context="Participant">
+      <Layout narrow context="Client">
         <div className="empty" style={{ marginTop: 48 }}>
           That code didn't match an active plan. <Link to="/participant">Enter your code</Link>
         </div>
@@ -74,6 +75,7 @@ export default function LogMeal() {
   function reset() {
     setPhoto(null);
     setNote("");
+    setShowNote(false);
     setOutcome(null);
     setSavedMeal(null);
     setError(null);
@@ -81,66 +83,75 @@ export default function LogMeal() {
     if (fileRef.current) fileRef.current.value = "";
   }
 
+  const analyzing = phase === "analyzing";
+
   return (
     <Layout narrow context={<>Client · <span className="code-chip">{code}</span></>}
-      headerRight={<Link className="header-link" to={`/participant/${code}`}>← My log</Link>}>
+      headerRight={<Link className="header-link" to={`/participant/${code}`}>← My log</Link>}
+      tabs={clientTabs(code)}>
 
       {phase !== "done" ? (
         <>
           <h1>Log this meal</h1>
-          <div className="banner banner--notice" style={{ marginTop: 14 }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" style={{ flexShrink: 0, marginTop: 2 }}>
-              <circle cx="8" cy="8" r="7" fill="none" stroke="currentColor" strokeWidth="1.5" />
-              <path d="M8 4.6v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-              <circle cx="8" cy="11.2" r="0.9" fill="currentColor" />
-            </svg>
-            <span>
-              <strong>Photograph the plate only.</strong> Fill the frame with the food. Keep people,
-              faces, screens, and the room out of the shot — only the meal gets checked, nothing else.
-            </span>
-          </div>
 
+          {/* PHOTO FIRST — the whole task is one photo */}
           {!photo ? (
-            <div className="photo-drop" onClick={() => fileRef.current?.click()} role="button" tabIndex={0}
+            <div className="capture-zone" onClick={() => fileRef.current?.click()} role="button" tabIndex={0}
               aria-label="Take or choose a photo of your plate"
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileRef.current?.click(); } }}>
-              <svg width="42" height="42" viewBox="0 0 40 40" aria-hidden="true" style={{ marginBottom: 10 }}>
-                <rect x="4" y="10" width="32" height="24" rx="2" fill="none" stroke="var(--ink)" strokeWidth="2" />
-                <path d="M14 10l2.5-4h7l2.5 4" fill="none" stroke="var(--ink)" strokeWidth="2" strokeLinejoin="round" />
-                <circle cx="20" cy="22" r="6" fill="none" stroke="var(--accent)" strokeWidth="2" />
-                <circle cx="20" cy="22" r="1.8" fill="var(--accent)" />
-              </svg>
-              <div style={{ fontWeight: 600, fontSize: 16 }}>Photograph your plate</div>
-              <div className="muted small" style={{ marginTop: 4 }}>Tap here — on a phone this opens your camera</div>
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileRef.current?.click(); } }}
+              style={{ marginTop: 16 }}>
+              <div className="cz-ring" aria-hidden="true">
+                <svg width="34" height="34" viewBox="0 0 40 40">
+                  <rect x="4" y="10" width="32" height="24" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
+                  <path d="M14 10l2.5-4h7l2.5 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+                  <circle cx="20" cy="22" r="6.5" fill="none" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              </div>
+              <div className="cz-title">Photograph your plate</div>
+              <div className="cz-hint">Tap to open your camera — just the food in frame</div>
             </div>
           ) : (
-            <div>
+            <div style={{ marginTop: 16 }}>
               <SpecimenPhoto src={photo.dataUrl} alt="Your meal photo, ready to check"
                 caption={`${code} · ${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })} · ${new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`}
                 style={{ width: "100%" }} />
-              <div style={{ marginTop: 8 }}>
-                <button className="btn btn--ghost" onClick={() => { setPhoto(null); if (fileRef.current) fileRef.current.value = ""; }}>
-                  Retake photo
-                </button>
-              </div>
+              {!analyzing ? (
+                <div style={{ marginTop: 8 }}>
+                  <button className="btn btn--ghost" onClick={() => { setPhoto(null); if (fileRef.current) fileRef.current.value = ""; }}>
+                    Retake photo
+                  </button>
+                </div>
+              ) : null}
             </div>
           )}
           <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: "none" }} onChange={onFile} />
 
-          <div className="field" style={{ marginTop: 20 }}>
-            <label htmlFor="note">Add a note (optional)</label>
-            <textarea id="note" className="textarea" value={note} onChange={(e) => setNote(e.target.value)}
-              placeholder="Anything the photo doesn't show — 'dressing on the side', 'shared portion'." />
-          </div>
+          {/* Optional note — hidden until asked for, so it never adds friction */}
+          {photo && !analyzing ? (
+            <div className="note-disclosure">
+              {!showNote ? (
+                <button className="note-toggle" aria-expanded="false" onClick={() => setShowNote(true)}>
+                  <span className="chev" aria-hidden="true">›</span> Add a note (optional)
+                </button>
+              ) : (
+                <div className="field" style={{ marginTop: 4 }}>
+                  <label htmlFor="note">Anything the photo doesn't show?</label>
+                  <textarea id="note" className="textarea" value={note} autoFocus onChange={(e) => setNote(e.target.value)}
+                    placeholder="e.g. 'dressing on the side', 'shared this portion'." />
+                </div>
+              )}
+            </div>
+          ) : null}
 
-          {error ? <div className="banner banner--notice">{error}</div> : null}
+          {error ? <div className="banner banner--notice" style={{ marginTop: 16 }}>{error}</div> : null}
 
-          <button className="btn btn--lg" style={{ width: "100%" }} disabled={!photo || phase === "analyzing"} onClick={submit}>
-            {phase === "analyzing" ? (<><span className="spinner" /> Checking against your plan…</>) : "Log this meal"}
+          <button className="btn btn--warm btn--lg btn--block" style={{ marginTop: 20 }}
+            disabled={!photo || analyzing} onClick={submit}>
+            {analyzing ? (<><span className="spinner" /> Checking against your plan…</>) : "Log this meal"}
           </button>
-          <p className="muted small" style={{ textAlign: "center" }}>
-            Your photo is checked against your plan — nothing else. It's a check-in, not a judgment,
-            and never dietary advice.
+          <p className="muted small" style={{ textAlign: "center", marginTop: 10 }}>
+            Photograph the plate only — keep people and surroundings out of frame. It's a check-in, not a
+            judgment, and never dietary advice.
           </p>
         </>
       ) : (
@@ -157,15 +168,25 @@ function ResultView({ outcome, meal, study, code, onLogAnother }) {
   const team = teamLabelForStudy(study);
   const r = outcome.result;
   const pending = meal.review?.state === "pending";
+  const onPlan = !pending && r.match_status === "on_protocol";
   const t = new Date(meal.timestamp);
   const caption = `${code} · ${t.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · ${t.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`;
   const recordNo = `TRW-${String(meal.timestamp).slice(-6)}`;
   const teamMessage = !pending ? findResponseTemplate(study.protocol, r)?.message : null;
 
+  // One clear headline state, not a block of text to parse.
+  const headline = pending
+    ? "Logged — one quick check left"
+    : onPlan
+      ? "On plan ✓"
+      : r.match_status === "partial_deviation"
+        ? "Logged — worth a look"
+        : "Logged — off plan today";
+
   return (
     <>
-      <h1>{pending ? "Meal logged — one extra step" : "Meal logged"}</h1>
-      <div className="record" style={{ marginTop: 16 }}>
+      <h1>{headline}</h1>
+      <div className="record record--reveal" style={{ marginTop: 16 }}>
         <div className="record-head">
           <span className="kicker">Verification record</span>
           <span className="kicker mono">{recordNo}</span>
@@ -175,7 +196,9 @@ function ResultView({ outcome, meal, study, code, onLogAnother }) {
             <SpecimenPhoto src={meal.photo} alt="Your logged meal" caption={caption} style={{ width: "100%" }} />
           </div>
           <div className="record-verdict">
-            <ScoreDial score={r.score} status={r.match_status} pending={pending} />
+            <div className={onPlan ? "verdict-halo" : undefined}>
+              <ScoreDial score={r.score} status={r.match_status} pending={pending} />
+            </div>
             <VerdictStamp status={r.match_status} pending={pending} />
             <ConfidencePill level={r.confidence} />
           </div>
@@ -218,8 +241,8 @@ function ResultView({ outcome, meal, study, code, onLogAnother }) {
         </div>
       </div>
       <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
-        <Link to={`/participant/${code}`} className="btn" style={{ flex: 1, minWidth: 180 }}>Back to my log</Link>
-        <button className="btn btn--secondary" style={{ flex: 1, minWidth: 180 }} onClick={onLogAnother}>Log another meal</button>
+        <Link to={`/participant/${code}`} className="btn btn--secondary" style={{ flex: 1, minWidth: 180 }}>Back to my log</Link>
+        <button className="btn btn--warm" style={{ flex: 1, minWidth: 180 }} onClick={onLogAnother}>Log another meal</button>
       </div>
     </>
   );

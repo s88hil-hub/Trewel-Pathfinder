@@ -1,4 +1,4 @@
-import { Layout, ResearcherNav, useLingo } from "../components/ui.jsx";
+import { Layout, ResearcherNav, useLingo, usePendingCount, practitionerTabs } from "../components/ui.jsx";
 import { useWorkspace } from "../lib/store.jsx";
 import { buildDataHandlingSummary, downloadFile } from "../lib/exports.js";
 
@@ -9,6 +9,7 @@ import { buildDataHandlingSummary, downloadFile } from "../lib/exports.js";
 export default function DataHandling() {
   const { data, updateSettings, logAudit, resetWorkspace } = useWorkspace();
   const lingo = useLingo();
+  const pending = usePendingCount();
   const research = data.settings.researchMode;
   const retention = data.settings?.retentionDays ?? 90;
   const audit = [...(data.audit || [])].sort((a, b) => b.ts - a.ts);
@@ -25,7 +26,8 @@ export default function DataHandling() {
   }
 
   return (
-    <Layout context={lingo.console} headerRight={<ResearcherNav active="data" />}>
+    <Layout context={lingo.console} headerRight={<ResearcherNav active="settings" />}
+      tabs={practitionerTabs(lingo, pending)}>
       <div className="section-head">
         <div>
           <h1>{research ? "Data handling" : "Privacy & compliance"}</h1>

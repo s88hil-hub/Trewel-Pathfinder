@@ -1,37 +1,41 @@
 import { Link } from "react-router-dom";
-import { Layout, StatusPill, ResearcherNav, SplitMeter, useLingo } from "../components/ui.jsx";
-import { Sparkline } from "../components/charts.jsx";
+import { Layout, StatusPill, ResearcherNav, useLingo, usePendingCount, practitionerTabs } from "../components/ui.jsx";
 import { useWorkspace } from "../lib/store.jsx";
 import { useAuth } from "../lib/auth.jsx";
-import { adherenceFlag, currentAdherence, dailySeries, reviewStats } from "../lib/adherence.js";
+import { adherenceFlag, currentAdherence, reviewStats } from "../lib/adherence.js";
 
 export default function ResearcherDashboard() {
   const { data, loadSample } = useWorkspace();
   const { user } = useAuth();
   const lingo = useLingo();
+  const pending = usePendingCount();
   const studies = Object.values(data.studies).sort((a, b) => b.createdAt - a.createdAt);
   const participants = Object.values(data.participants);
   const allMeals = participants.flatMap((p) => p.meals);
   const stats = reviewStats(allMeals);
 
   // "3 of 5 clients on track this week" — adherence to plan, not nutrient totals.
-  const withData = participants.map((p) => adherenceFlag(p.meals)).filter((f) => f.level !== "nodata");
-  const onTrack = withData.filter((f) => f.level === "good").length;
+  const flags = participants.map((p) => ({ p, flag: adherenceFlag(p.meals) }));
+  const withData = flags.filter((f) => f.flag.level !== "nodata");
+  const onTrack = withData.filter((f) => f.flag.level === "good").length;
+
+  // The single most important thing: who needs attention right now.
+  const needsAttention = flags
+    .filter((f) => f.flag.level === "critical" || f.flag.level === "serious")
+    .sort((a, b) => (a.flag.score ?? 999) - (b.flag.score ?? 999));
 
   const isEmpty = studies.length === 0;
-  const anyRealMeal = allMeals.some((m) => m.photo);
 
   return (
-    <Layout context={lingo.console} headerRight={<ResearcherNav active="studies" />}>
+    <Layout context={lingo.console} headerRight={<ResearcherNav active="studies" />}
+      tabs={practitionerTabs(lingo, pending)}>
       <div className="section-head">
         <div>
           <h1>{lingo.plans}</h1>
           <p className="muted small" style={{ margin: "4px 0 0" }}>
             {isEmpty
               ? `Welcome, ${user?.name || "practitioner"}.`
-              : withData.length > 0
-                ? <><strong className="mono">{onTrack} of {withData.length}</strong> {onTrack === 1 && withData.length === 1 ? lingo.clientLower : lingo.clientsLower} on track this week · adherence is the rolling 7-day average of verified meal-match scores (0–100).</>
-                : "Adherence is the rolling 7-day average of verified meal-match scores (0–100)."}
+              : <>Signed in as {user?.name}. Adherence is the rolling 7-day average of verified meal-match scores.</>}
           </p>
         </div>
         <Link to="/researcher/studies/new" className="btn">+ Create {lingo.planLower}</Link>
@@ -41,31 +45,35 @@ export default function ResearcherDashboard() {
         <FirstRunChecklist lingo={lingo} loadSample={loadSample} />
       ) : (
         <>
-          {/* Verification transparency — the system knows its own limits */}
-          <div className="stat-row" style={{ marginBottom: 22 }}>
-            <div className="stat-tile">
-              <div className="stat-label">{lingo.clients} on track</div>
-              <div className="stat-value">{withData.length ? `${onTrack}/${withData.length}` : "—"}</div>
+          {/* THE HERO: who needs attention right now */}
+          <AttentionHero
+            needsAttention={needsAttention}
+            pending={pending}
+            studies={data.studies}
+            lingo={lingo}
+          />
+
+          {/* Secondary at-a-glance figures, condensed */}
+          <div className="mini-stats">
+            <div className="mini-stat">
+              <div className="k">{lingo.clients} on track</div>
+              <div className="v">{withData.length ? `${onTrack}/${withData.length}` : "—"}</div>
             </div>
-            <div className="stat-tile" style={{ gridColumn: "span 2" }}>
-              <div className="stat-label">Verification transparency</div>
-              <div style={{ fontSize: 14.5, marginTop: 2 }}>
-                <strong className="mono">{stats.autoPct}%</strong> auto-verified ·{" "}
-                <strong className="mono">{stats.flaggedPct}%</strong> routed to human review
-              </div>
-              <SplitMeter a={stats.autoPct} b={stats.flaggedPct} aLabel="Auto-verified" bLabel="Human-reviewed" />
+            <div className="mini-stat">
+              <div className="k">Auto-verified</div>
+              <div className="v">{stats.autoPct}%</div>
             </div>
-            <div className="stat-tile">
-              <div className="stat-label">Awaiting review</div>
-              <div className="stat-value">{stats.pending}</div>
-              <div style={{ marginTop: 6 }}>
-                {stats.pending > 0
-                  ? <Link to="/researcher/review" className="small" style={{ fontWeight: 600 }}>Open review queue →</Link>
-                  : <span className="muted small">Queue clear</span>}
-              </div>
+            <div className="mini-stat">
+              <div className="k">Awaiting review</div>
+              <div className="v">{stats.pending}</div>
             </div>
           </div>
 
+          {/* Plans — one calm row each; detail lives a click away */}
+          <div className="section-head" style={{ marginBottom: 12 }}>
+            <h2>Your {lingo.plansLower}</h2>
+            <span className="muted small">{studies.length} active</span>
+          </div>
           {studies.map((study) => {
             const studyParticipants = study.participants.map((c) => data.participants[c]).filter(Boolean);
             const scores = studyParticipants.map((p) => currentAdherence(p.meals)).filter((s) => s != null);
@@ -74,32 +82,21 @@ export default function ResearcherDashboard() {
               const f = adherenceFlag(p.meals);
               return f.level === "critical" || f.level === "serious";
             }).length;
-            const studyMeals = studyParticipants.flatMap((p) => p.meals);
             return (
-              <div key={study.id} className="card">
-                <div className="card-title-row">
-                  <div>
-                    <h2><Link to={`/researcher/studies/${study.id}`}>{study.name}</Link></h2>
-                    <p className="muted small" style={{ margin: "4px 0 0", maxWidth: 640 }}>{study.description}</p>
-                  </div>
-                  <Link className="btn btn--secondary" to={`/researcher/studies/${study.id}`}>Open {lingo.planLower}</Link>
+              <Link key={study.id} to={`/researcher/studies/${study.id}`} className="plan-row">
+                <div className="pr-main">
+                  <div className="pr-name">{study.name}</div>
+                  {study.description ? <div className="pr-desc">{study.description}</div> : null}
                 </div>
-                <div style={{ display: "flex", gap: 28, alignItems: "center", flexWrap: "wrap" }}>
-                  <Metric label={lingo.clients} value={studyParticipants.length} />
-                  <Metric label="Meals logged" value={studyMeals.length} />
-                  <Metric label="Mean adherence (7d)" value={avg != null ? avg : "—"} />
-                  <div>
-                    <div className="stat-label">Trend (14d)</div>
-                    <Sparkline series={dailySeries(studyMeals, 14)} width={140} height={34} />
-                  </div>
-                  <div>
-                    <div className="stat-label">Flags</div>
-                    {flagged > 0
-                      ? <StatusPill level="serious" label={`${flagged} ${flagged === 1 ? lingo.clientLower : lingo.clientsLower} off-plan / trending off`} />
-                      : <StatusPill level="good" label="No active flags" />}
-                  </div>
+                <Metric label={lingo.clients} value={studyParticipants.length} />
+                <Metric label="Adherence" value={avg != null ? avg : "—"} />
+                <div style={{ minWidth: 128 }}>
+                  <div className="stat-label">Status</div>
+                  {flagged > 0
+                    ? <StatusPill level="serious" label={`${flagged} need${flagged === 1 ? "s" : ""} attention`} />
+                    : <StatusPill level="good" label="All on track" />}
                 </div>
-              </div>
+              </Link>
             );
           })}
         </>
@@ -108,9 +105,91 @@ export default function ResearcherDashboard() {
   );
 }
 
+/* ------------------------------------------------------------------ */
+/* Attention hero — the dominant, immediately-visible element. Three    */
+/* states: someone off-plan (urgent), reviews waiting (calm), or clear. */
+/* ------------------------------------------------------------------ */
+function AttentionHero({ needsAttention, pending, studies, lingo }) {
+  const count = needsAttention.length;
+
+  // State 1 — nobody off-plan, nothing to review: all clear.
+  if (count === 0 && pending === 0) {
+    return (
+      <div className="attention attention--clear">
+        <div className="attention-head">
+          <span className="attention-count attention-count--clear">✓</span>
+          <div>
+            <h2 style={{ margin: 0 }}>Everyone's on track</h2>
+            <div className="attention-sub">No {lingo.clientsLower} are off-plan and nothing is waiting for review.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // State 2 — nobody off-plan, but meals are waiting for review: calm, not red.
+  if (count === 0) {
+    return (
+      <div className="attention attention--clear">
+        <div className="attention-head">
+          <span className="attention-count attention-count--clear">{pending}</span>
+          <div>
+            <h2 style={{ margin: 0 }}>{pending} meal{pending === 1 ? "" : "s"} to review</h2>
+            <div className="attention-sub">
+              No {lingo.clientsLower} are off-plan. The AI wasn't sure about {pending === 1 ? "one meal" : "these"} —{" "}
+              <Link to="/researcher/review" style={{ fontWeight: 600 }}>confirm or correct →</Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // State 3 — someone is off-plan: urgent, list them.
+  return (
+    <div className="attention attention--flagged">
+      <div className="attention-head">
+        <span className="attention-count attention-count--flagged">{count}</span>
+        <div>
+          <h2 style={{ margin: 0 }}>
+            {count} {count === 1 ? lingo.clientLower : lingo.clientsLower} need{count === 1 ? "s" : ""} attention
+          </h2>
+          <div className="attention-sub">
+            Off-plan or trending off-plan this week — worth a look.
+            {pending > 0 ? (
+              <> · <Link to="/researcher/review" style={{ fontWeight: 600 }}>{pending} meal{pending === 1 ? "" : "s"} awaiting review →</Link></>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="attention-list">
+        {needsAttention.slice(0, 5).map(({ p, flag }) => {
+          const study = studies[p.studyId];
+          return (
+            <Link key={p.code} className="attention-item"
+              to={`/researcher/studies/${p.studyId}/participants/${p.code}`}>
+              <div>
+                <div className="ai-code">{p.code}</div>
+                <div className="ai-plan">{study?.name || "—"}</div>
+              </div>
+              <span className="header-spacer" />
+              <StatusPill level={flag.level} label={flag.label} />
+              <span className="ai-arrow" aria-hidden="true">→</span>
+            </Link>
+          );
+        })}
+        {count > 5 ? (
+          <div className="muted small" style={{ padding: "4px 4px 0" }}>+{count - 5} more across your {lingo.plansLower}.</div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function Metric({ label, value }) {
   return (
-    <div>
+    <div style={{ minWidth: 74 }}>
       <div className="stat-label">{label}</div>
       <div className="mono" style={{ fontSize: 22, fontWeight: 600 }}>{value}</div>
     </div>

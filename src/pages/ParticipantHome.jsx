@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { Layout, MealCard, StatTile } from "../components/ui.jsx";
+import { Layout, MealCard, StatTile, clientTabs } from "../components/ui.jsx";
 import { AdherenceLineChart } from "../components/charts.jsx";
 import { useParticipantLookup } from "../lib/store.jsx";
 import { teamLabelForStudy } from "../lib/lingo.js";
@@ -60,21 +60,27 @@ export default function ParticipantHome() {
 
   return (
     <Layout narrow context={<>Client · <span className="code-chip">{participant.code}</span></>}
-      headerRight={<Link className="header-link" to="/participant">Switch code</Link>}>
+      headerRight={<Link className="header-link" to="/participant">Switch code</Link>}
+      tabs={clientTabs(code)}>
 
-      <div className="section-head">
-        <div>
-          <div className="card-kicker">{study.name}</div>
-          <h1>{study.surface === "research" ? "Your study dashboard" : "Your plan"}</h1>
+      <div className="client-hero">
+        <div className="ch-plan">{study.name}</div>
+        <h1>{study.surface === "research" ? "Your study dashboard" : "Your plan"}</h1>
+        <p className="muted small" style={{ margin: "8px 0 0", maxWidth: 460 }}>
+          {week.daysLogged === 0
+            ? "Snap a photo of your next meal — that's the whole thing. You'll see how it lines up with your plan right away."
+            : "Nice work keeping this up. One photo per meal is all it takes."}
+        </p>
+        <div className="ch-cta">
+          <Link to={`/participant/${code}/log`} className="log-cta">
+            <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+              <rect x="2" y="5.5" width="16" height="11.5" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.7" />
+              <path d="M6.5 5.5l1.3-2.3h4.4l1.3 2.3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+              <circle cx="10" cy="11.4" r="3.1" fill="none" stroke="currentColor" strokeWidth="1.7" />
+            </svg>
+            Log a meal
+          </Link>
         </div>
-        <Link to={`/participant/${code}/log`} className="btn btn--lg">
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <rect x="1.5" y="4" width="13" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            <path d="M5.5 4l1-2h3l1 2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-            <circle cx="8" cy="9" r="2.6" fill="none" stroke="currentColor" strokeWidth="1.6" />
-          </svg>
-          Log a meal
-        </Link>
       </div>
 
       <div className="stat-row">

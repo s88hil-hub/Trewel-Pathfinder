@@ -1,5 +1,5 @@
-import { useNavigate } from "react-router-dom";
-import { Layout, ResearcherNav, useLingo } from "../components/ui.jsx";
+import { Link, useNavigate } from "react-router-dom";
+import { Layout, ResearcherNav, useLingo, usePendingCount, practitionerTabs } from "../components/ui.jsx";
 import { useWorkspace } from "../lib/store.jsx";
 import { useAuth } from "../lib/auth.jsx";
 
@@ -10,6 +10,7 @@ export default function Settings() {
   const { data, updateSettings } = useWorkspace();
   const { user, logout } = useAuth();
   const lingo = useLingo();
+  const pending = usePendingCount();
   const navigate = useNavigate();
   const research = data.settings.researchMode;
 
@@ -19,7 +20,8 @@ export default function Settings() {
   }
 
   return (
-    <Layout narrow context={lingo.console} headerRight={<ResearcherNav active="settings" />}>
+    <Layout narrow context={lingo.console} headerRight={<ResearcherNav active="settings" />}
+      tabs={practitionerTabs(lingo, pending)}>
       <h1>Settings</h1>
 
       <div className="card" style={{ marginTop: 16 }}>
@@ -35,6 +37,17 @@ export default function Settings() {
           Your plans, clients, and meal logs are saved to this account and restored when you sign back in.
         </p>
       </div>
+
+      <Link to="/researcher/data-handling" className="plan-row" style={{ marginTop: 18 }}>
+        <div className="pr-main">
+          <div className="pr-name" style={{ fontSize: 16 }}>{lingo.privacy}</div>
+          <div className="pr-desc">
+            What Trewel collects, retention &amp; deletion, and the full access log —
+            {research ? " plus your IRB-readiness summary and REDCap export." : " the questions a HIPAA review asks first."}
+          </div>
+        </div>
+        <span className="ai-arrow" aria-hidden="true">→</span>
+      </Link>
 
       <div className="card">
         <div className="card-kicker">Surfaces</div>
@@ -64,11 +77,6 @@ export default function Settings() {
           <button className="btn btn--secondary btn--small" disabled>Coming soon</button>
         </div>
       </div>
-
-      <p className="muted small">
-        Privacy, retention, and the access log live in{" "}
-        <a href="/researcher/data-handling">{lingo.privacy}</a>.
-      </p>
     </Layout>
   );
 }

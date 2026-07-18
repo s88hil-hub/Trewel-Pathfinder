@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Layout, StatusPill, ResearcherNav, useLingo } from "../components/ui.jsx";
+import { Layout, StatusPill, ResearcherNav, useLingo, usePendingCount, practitionerTabs } from "../components/ui.jsx";
 import { AdherenceLineChart, Sparkline } from "../components/charts.jsx";
 import { useWorkspace } from "../lib/store.jsx";
 import { adherenceFlag, currentAdherence, dailySeries, weeklyRollup, mealIsPending } from "../lib/adherence.js";
@@ -94,6 +94,7 @@ export default function StudyDetail() {
   const navigate = useNavigate();
   const { data, addParticipant, logAudit } = useWorkspace();
   const lingo = useLingo();
+  const pending = usePendingCount();
   const researchMode = data.settings.researchMode;
   const study = data.studies[id];
   const [sort, setSort] = useState({ key: "flag", dir: 1 });
@@ -160,7 +161,7 @@ export default function StudyDetail() {
   }
 
   return (
-    <Layout context={lingo.console} headerRight={<ResearcherNav />}>
+    <Layout context={lingo.console} headerRight={<ResearcherNav />} tabs={practitionerTabs(lingo, pending)}>
       <div className="section-head">
         <div>
           <div className="card-kicker"><Link to="/researcher/dashboard">← All {lingo.plansLower}</Link></div>

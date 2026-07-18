@@ -18,7 +18,7 @@
 
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-flash-latest";
 
 // Structured-output schema: what the model must return for every photo.
 // (Gemini's schema format is a constrained subset of OpenAPI/JSON Schema —

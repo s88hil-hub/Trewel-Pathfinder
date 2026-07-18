@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { STATUS_META, CONFIDENCE_META, mealIsPending } from "../lib/adherence.js";
 import { SpecimenPhoto } from "./verification.jsx";
 import { useWorkspace } from "../lib/store.jsx";
@@ -6,6 +6,46 @@ import { useAuth } from "../lib/auth.jsx";
 import { lingoFor } from "../lib/lingo.js";
 import trewelLogo from "../assets/trewel-logo.png";
 import trewelMark from "../assets/trewel-mark.png";
+
+/* ------------------------------------------------------------------ */
+/* Tab icons — used by the mobile bottom bar                           */
+/* ------------------------------------------------------------------ */
+const TAB_ICONS = {
+  plans: (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="3.5" y="4.5" width="17" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M7 14l3-3.5 2.5 2L17 8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 20.5h6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  ),
+  review: (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M11 8v3.2l2 1.4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 16l4 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  ),
+  settings: (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.2 5.2l2.1 2.1M16.7 16.7l2.1 2.1M18.8 5.2l-2.1 2.1M7.3 16.7l-2.1 2.1"
+        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  ),
+  home: (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 11l8-6.5 8 6.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M6 10v9.5h12V10" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  camera: (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="2.5" y="6.5" width="19" height="13.5" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8 6.5l1.6-2.8h4.8L16 6.5" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <circle cx="12" cy="13.3" r="3.6" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  ),
+};
 
 /* ------------------------------------------------------------------ */
 /* Reticle glyph — the verification mark, used standalone (e.g. as a   */
@@ -30,14 +70,21 @@ export function Wordmark({ sub }) {
 /* ------------------------------------------------------------------ */
 /* Researcher navigation — consistent across the console               */
 /* ------------------------------------------------------------------ */
+// Primary practitioner nav — trimmed to three essentials. Privacy & compliance
+// now lives inside Settings (linked from there), so the top bar stays focused.
+export function usePendingCount() {
+  const { data } = useWorkspace();
+  return Object.values(data.participants).reduce(
+    (n, p) => n + p.meals.filter(mealIsPending).length, 0
+  );
+}
+
 export function ResearcherNav({ active }) {
   const { data } = useWorkspace();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const lingo = lingoFor(data.settings.researchMode);
-  const pending = Object.values(data.participants).reduce(
-    (n, p) => n + p.meals.filter(mealIsPending).length, 0
-  );
+  const pending = usePendingCount();
   const cls = (k) => `header-link${active === k ? " header-link--active" : ""}`;
   function signOut() {
     logout();
@@ -47,9 +94,8 @@ export function ResearcherNav({ active }) {
     <nav className="header-nav" aria-label={lingo.console}>
       <Link className={cls("studies")} to="/researcher/dashboard">{lingo.plans}</Link>
       <Link className={cls("review")} to="/researcher/review">
-        Review queue{pending > 0 ? <span className="nav-badge">{pending}</span> : null}
+        Review{pending > 0 ? <span className="nav-badge">{pending}</span> : null}
       </Link>
-      <Link className={cls("data")} to="/researcher/data-handling">{lingo.privacy}</Link>
       <Link className={cls("settings")} to="/researcher/settings">Settings</Link>
       <button className="btn btn--ghost" style={{ fontSize: 13.5 }} onClick={signOut}>Sign out</button>
     </nav>
@@ -63,9 +109,50 @@ export function useLingo() {
 }
 
 /* ------------------------------------------------------------------ */
+/* Bottom tab bar — mobile only (CSS-hidden on desktop). Thumb-reachable, */
+/* persistent, safe-area aware. Tabs are passed per surface.             */
+/* ------------------------------------------------------------------ */
+export function BottomTabs({ tabs }) {
+  const location = useLocation();
+  if (!tabs?.length) return null;
+  return (
+    <nav className="bottom-tabs" aria-label="Primary">
+      {tabs.map((t) => {
+        const active = t.match ? t.match(location.pathname) : location.pathname === t.to;
+        return (
+          <Link key={t.to} to={t.to}
+            className={`bottom-tab${active ? " bottom-tab--active" : ""}${t.warm ? " bottom-tab--warm" : ""}`}
+            aria-current={active ? "page" : undefined}>
+            {TAB_ICONS[t.icon]}
+            <span>{t.label}</span>
+            {t.badge > 0 ? <span className="tab-badge">{t.badge}</span> : null}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+// Tab set builders.
+export function practitionerTabs(lingo, pending) {
+  return [
+    { to: "/researcher/dashboard", label: lingo.plans, icon: "plans", match: (p) => p.startsWith("/researcher/dashboard") || p.startsWith("/researcher/studies") },
+    { to: "/researcher/review", label: "Review", icon: "review", badge: pending, match: (p) => p.startsWith("/researcher/review") },
+    { to: "/researcher/settings", label: "Settings", icon: "settings", match: (p) => p.startsWith("/researcher/settings") || p.startsWith("/researcher/data-handling") },
+  ];
+}
+export function clientTabs(code) {
+  return [
+    { to: `/participant/${code}`, label: "My plan", icon: "home", match: (p) => p === `/participant/${code}` },
+    { to: `/participant/${code}/log`, label: "Log a meal", icon: "camera", warm: true, match: (p) => p.endsWith("/log") },
+  ];
+}
+
+/* ------------------------------------------------------------------ */
 /* Page chrome                                                         */
 /* ------------------------------------------------------------------ */
-export function Layout({ context, headerRight, narrow, children }) {
+export function Layout({ context, headerRight, narrow, tabs, children }) {
+  const location = useLocation();
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -76,8 +163,12 @@ export function Layout({ context, headerRight, narrow, children }) {
           {headerRight}
         </div>
       </header>
-      <main className={`app-main${narrow ? " app-main--narrow" : ""}`}>{children}</main>
+      {/* keyed on pathname so each navigation replays the enter transition */}
+      <main key={location.pathname} className={`app-main page-enter${narrow ? " app-main--narrow" : ""}`}>
+        {children}
+      </main>
       <DataHandlingFooter />
+      {tabs ? <BottomTabs tabs={tabs} /> : null}
     </div>
   );
 }
