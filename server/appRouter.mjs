@@ -14,6 +14,8 @@
 // ---------------------------------------------------------------------------
 
 import { sql, ensureSchema, DEMO_ACCOUNT } from "./db.mjs";
+import { analyzeMeal } from "./analyzeMeal.mjs";
+import { addSignup, countSignups } from "./waitlist.mjs";
 import {
   hashPassword, verifyPassword, createSession, getPractitionerFromRequest,
   destroySession, setCookie, clearCookie, SESSION_COOKIE,
@@ -171,12 +173,35 @@ async function reseedSampleForPractitioner(practitionerId) {
 /* Route handler                                                       */
 /* ------------------------------------------------------------------ */
 export async function handleApiRequest(req, res, routePath) {
-  await ensureSchema();
   const method = req.method;
   const path = routePath.split("?")[0];
   let m;
 
   try {
+    // ---------------- AI MEAL ANALYSIS (no DB dependency — kept that way) ----------------
+    if (method === "POST" && path === "/analyze-meal") {
+      try {
+        const result = await analyzeMeal(await getBody(req));
+        return sendJson(res, 200, result);
+      } catch (err) {
+        return sendJson(res, 500, { error: String(err?.message || err) });
+      }
+    }
+
+    // ---------------- WAITLIST (DB-backed, but its own isolated concern) ----------------
+    if (path === "/waitlist") {
+      if (method === "GET") {
+        return sendJson(res, 200, { total: await countSignups() });
+      }
+      if (method === "POST") {
+        const { email } = await getBody(req);
+        const result = await addSignup(email);
+        return sendJson(res, result.ok ? 200 : 400, result);
+      }
+    }
+
+    await ensureSchema();
+
     // ---------------- AUTH ----------------
     if (method === "POST" && path === "/auth/register") {
       const { name, email, password } = await getBody(req);
