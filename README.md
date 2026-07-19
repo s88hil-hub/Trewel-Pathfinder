@@ -1,6 +1,6 @@
 # Trewel
 
-Plan-adherence verification for nutrition care, powered by a server-side database.
+Plan-adherence verification for nutrition care, powered by a server-side database (Postgres via Neon).
 
 **Plan-adherence verification for nutrition care.** A dietitian (or researcher) defines a care
 plan as structured rules; their client photographs each meal; a multimodal AI checks the photo
