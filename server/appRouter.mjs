@@ -377,8 +377,15 @@ export async function handleApiRequest(req, res, routePath) {
       return sendJson(res, 200, { meal: { id, timestamp: ts, photo: photo || null, note: note || "", engine, result, review } });
     }
 
+    // Public "demo codes" hint on the join page. Scoped to ONLY the seeded
+    // demo account — this must never surface a real practitioner's real
+    // client codes to an unauthenticated visitor.
     if (method === "GET" && path === "/participant-codes") {
-      const { rows } = await sql`SELECT code FROM participants`;
+      const { rows } = await sql`
+        SELECT pt.code
+        FROM participants pt
+        JOIN studies st ON st.id = pt.study_id
+        WHERE st.practitioner_id = ${DEMO_ACCOUNT.id}`;
       return sendJson(res, 200, { codes: rows.map((r) => r.code) });
     }
 
