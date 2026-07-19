@@ -22,6 +22,14 @@ export default function LogMeal() {
   const [savedMeal, setSavedMeal] = useState(null);
   const [error, setError] = useState(null);
 
+  if (lookup?.loading) {
+    return (
+      <Layout narrow context="Client">
+        <div className="empty" style={{ marginTop: 48 }}>Loading your plan…</div>
+      </Layout>
+    );
+  }
+
   if (!participant || !study) {
     return (
       <Layout narrow context="Client">
@@ -62,7 +70,7 @@ export default function LogMeal() {
         engine: res.engine,
         result: res.result,
       };
-      const saved = lookup.addMeal(meal); // store decides pending vs auto-verified
+      const saved = await lookup.addMeal(meal); // store decides pending vs auto-verified
       setSavedMeal(saved);
       setOutcome(res);
       setPhase("done");

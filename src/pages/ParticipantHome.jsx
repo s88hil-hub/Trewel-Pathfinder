@@ -40,6 +40,14 @@ export default function ParticipantHome() {
   const study = lookup?.study;
   const team = teamLabelForStudy(study);
 
+  if (lookup?.loading) {
+    return (
+      <Layout narrow context="Client">
+        <div className="empty" style={{ marginTop: 48 }}>Loading your plan…</div>
+      </Layout>
+    );
+  }
+
   if (!participant || !study) {
     return (
       <Layout narrow context="Participant">

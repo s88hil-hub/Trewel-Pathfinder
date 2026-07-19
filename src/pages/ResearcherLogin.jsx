@@ -33,7 +33,7 @@ export default function ResearcherLogin() {
         mode === "signup"
           ? await register(name, email, password)
           : await login(email, password);
-      logAudit(record.id, mode === "signup" ? "Account created" : "Signed in", "Console access", record.email);
+      await logAudit(mode === "signup" ? "Account created" : "Signed in", "Console access", record.email);
       navigate(location.state?.from || "/researcher/dashboard", { replace: true });
     } catch (err) {
       setError(err.message);

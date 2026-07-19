@@ -151,8 +151,8 @@ export default function StudyDetail() {
   const flaggedCount = rows.filter((r) => r.flag.level === "critical" || r.flag.level === "serious").length;
   const pendingCount = allMeals.filter(mealIsPending).length;
 
-  function onAddParticipant() {
-    const code = addParticipant(study.id);
+  async function onAddParticipant() {
+    const code = await addParticipant(study.id);
     setNewCode(code);
   }
 

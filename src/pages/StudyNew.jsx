@@ -65,6 +65,7 @@ export default function StudyNew() {
   const [responseTemplates, setResponseTemplates] = useState([]);
   const [activeTemplate, setActiveTemplate] = useState(null); // null = nothing picked yet
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
   const setEv = (k) => (e) => set(k)(e.target.value);
@@ -125,15 +126,21 @@ export default function StudyNew() {
     );
   }
 
-  function create() {
-    const id = createStudy({
-      name: name.trim(),
-      surface: researchMode ? "research" : "care",
-      description: description.trim(),
-      codePrefix: (codePrefix.trim() || name.trim().slice(0, 5)).toUpperCase().replace(/[^A-Z0-9]/g, "") || "TRW",
-      protocol: buildProtocol(),
-    });
-    navigate(`/researcher/studies/${id}`);
+  async function create() {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const id = await createStudy({
+        name: name.trim(),
+        surface: researchMode ? "research" : "care",
+        description: description.trim(),
+        codePrefix: (codePrefix.trim() || name.trim().slice(0, 5)).toUpperCase().replace(/[^A-Z0-9]/g, "") || "TRW",
+        protocol: buildProtocol(),
+      });
+      navigate(`/researcher/studies/${id}`);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function addResponseTemplate() {
@@ -384,7 +391,9 @@ export default function StudyNew() {
             <button className="btn btn--secondary" onClick={() => setStep(2)}>← Back</button>
             <div style={{ display: "flex", gap: 10 }}>
               <button type="button" className="btn btn--secondary" onClick={exportJson}>Export JSON</button>
-              <button className="btn" disabled={!canCreate} onClick={create}>Create {researchMode ? "study" : "care plan"}</button>
+              <button className="btn" disabled={!canCreate || submitting} onClick={create}>
+                {submitting ? "Creating…" : `Create ${researchMode ? "study" : "care plan"}`}
+              </button>
             </div>
           </div>
         </div>

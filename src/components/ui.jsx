@@ -183,8 +183,8 @@ export function DataHandlingFooter() {
         </svg>
         <span>
           <strong>Privacy.</strong> Trewel is a prototype. All plan and meal data — including photos —
-          stays in this browser for demonstration and is transmitted only for automated meal analysis.
-          Production deployment in a clinic or trial requires the appropriate data agreements (HIPAA
+          is stored in a private, server-side database for demonstration and is transmitted only for
+          automated meal analysis. Production deployment in a clinic or trial requires the appropriate data agreements (HIPAA
           business-associate or IRB/institutional, depending on setting) covering photo capture, storage,
           and retention. Automated assessments check adherence to a practitioner-defined plan only; they
           are not medical or dietary advice.

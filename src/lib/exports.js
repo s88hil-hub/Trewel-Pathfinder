@@ -150,9 +150,10 @@ feedback about deviations is practitioner-pre-authored template text — the AI
 never generates novel dietary guidance.
 
 ## Storage & retention (prototype configuration)
-- Storage: browser localStorage on the researcher's/participant's own device
-  (prototype only; production deployment would use institution-approved storage
-  under a data-use agreement).
+- Storage: a server-side database, not the browser — accounts, plans, client
+  codes, and meal logs are stored centrally so they're reachable from any
+  device (prototype configuration; production deployment would formalize this
+  under an institutional data-use agreement).
 - Retention setting: study data retained ${retention} days after study close,
   then deleted.
 - Manual deletion: workspace data can be deleted immediately from the

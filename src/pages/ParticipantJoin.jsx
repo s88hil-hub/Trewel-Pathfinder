@@ -8,17 +8,28 @@ export default function ParticipantJoin() {
   const allCodes = useAllParticipantCodes();
   const [code, setCode] = useState("");
   const [error, setError] = useState(null);
+  const [checking, setChecking] = useState(false);
 
   // Surface a few seeded codes so the demo is one click away.
   const sampleCodes = allCodes.slice(0, 3);
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     const clean = code.trim().toUpperCase();
-    if (allCodes.includes(clean)) {
-      navigate(`/participant/${clean}`);
-    } else {
-      setError("That code didn't match an active plan. Double-check it with whoever gave it to you.");
+    if (!clean) return;
+    setChecking(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/participant/${encodeURIComponent(clean)}`);
+      if (res.ok) {
+        navigate(`/participant/${clean}`);
+      } else {
+        setError("That code didn't match an active plan. Double-check it with whoever gave it to you.");
+      }
+    } catch {
+      setError("Couldn't check that code — check your connection and try again.");
+    } finally {
+      setChecking(false);
     }
   }
 
@@ -41,7 +52,9 @@ export default function ParticipantJoin() {
               style={{ fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.05em" }} />
             {error ? <div className="hint" style={{ color: "var(--off-text)", fontWeight: 500 }}>{error}</div> : null}
           </div>
-          <button className="btn" type="submit" style={{ width: "100%" }}>Open my plan</button>
+          <button className="btn" type="submit" disabled={checking} style={{ width: "100%" }}>
+            {checking ? "Checking…" : "Open my plan"}
+          </button>
         </form>
         <hr className="divider" />
         <p className="muted small" style={{ margin: 0 }}>

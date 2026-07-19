@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { analyzeMeal } from "./server/analyzeMeal.mjs";
 import { addSignup, countSignups } from "./server/waitlist.mjs";
+import { handleApiRequest } from "./server/appRouter.mjs";
 
 // Dev-server middleware exposing the AI matching module at POST /api/analyze-meal.
 // The matching logic itself lives in server/analyzeMeal.mjs so it can be swapped
@@ -60,6 +61,21 @@ function trewelApiPlugin() {
             res.statusCode = 500;
             res.end(JSON.stringify({ error: String(err?.message || err) }));
           }
+        });
+      });
+
+      // Everything else under /api (auth, workspace, participant, admin) is
+      // handled by the shared server/appRouter.mjs — the exact same code
+      // that runs on Vercel via api/[...path].mjs, so dev and prod behave
+      // identically. Connect strips the "/api" mount prefix from req.url
+      // before this handler runs, so routePath here is already e.g.
+      // "/auth/login" (see the stripping note in appRouter.mjs).
+      server.middlewares.use("/api", (req, res) => {
+        handleApiRequest(req, res, req.url || "/").catch((err) => {
+          console.error("[trewel] API error:", err);
+          res.statusCode = 500;
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ error: String(err?.message || err) }));
         });
       });
     },

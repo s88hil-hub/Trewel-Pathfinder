@@ -12,6 +12,7 @@ import LogMeal from "./pages/LogMeal.jsx";
 import ReviewQueue from "./pages/ReviewQueue.jsx";
 import DataHandling from "./pages/DataHandling.jsx";
 import Settings from "./pages/Settings.jsx";
+import Admin from "./pages/Admin.jsx";
 
 function RequirePractitioner({ children }) {
   const { ready, user } = useAuth();
@@ -38,6 +39,7 @@ export default function App() {
       <Route path="/participant" element={<ParticipantJoin />} />
       <Route path="/participant/:code" element={<ParticipantHome />} />
       <Route path="/participant/:code/log" element={<LogMeal />} />
+      <Route path="/admin" element={<Admin />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
