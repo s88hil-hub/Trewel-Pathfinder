@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/api/(?!analyze-meal|waitlist)(.*)", "destination": "/api/gateway" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
