@@ -106,8 +106,8 @@ export default function Landing() {
         <nav className="mkt-nav">
           <Wordmark />
           <span className="header-spacer" />
-          <Link to="/participant">Have a client code?</Link>
-          <Link to="/researcher" className="btn btn--secondary btn--small">Sign in</Link>
+          <Link to="/participant">Client? Enter your code</Link>
+          <Link to="/researcher" className="btn btn--secondary btn--small">Dietitian sign in</Link>
         </nav>
 
         {/* HERO */}
@@ -220,7 +220,7 @@ export default function Landing() {
         <footer className="mkt-footer">
           <Wordmark />
           <span className="header-spacer" />
-          <span>Also for researchers · <Link to="/researcher">Practitioner sign-in</Link> · <Link to="/participant">Client code</Link></span>
+          <span>Dietitian? <Link to="/researcher">Sign in to your console</Link> · Client? <Link to="/participant">Enter your code</Link></span>
         </footer>
       </div>
 
