@@ -920,23 +920,6 @@ td.num { font-family: var(--font-mono); font-size: 13.5px; }
 }
 .mkt-showcase-arrow { font-family: var(--font-mono); color: var(--ink-muted); font-size: 20px; }
 
-.mkt-cta-final {
-  margin-top: clamp(56px, 8vw, 88px); text-align: center;
-  background: var(--ink); color: var(--paper);
-  border-radius: var(--radius-lg); padding: clamp(36px, 6vw, 60px) 28px;
-  box-shadow: var(--shadow-lg);
-}
-.mkt-cta-final h2 { color: var(--paper); font-size: clamp(26px, 4vw, 38px); }
-.mkt-cta-final p { color: rgba(243, 242, 234, 0.72); max-width: 48ch; margin: 14px auto 24px; }
-.mkt-cta-final .waitlist-form { max-width: 440px; margin: 22px auto 0; flex-direction: row; }
-@media (max-width: 560px) { .mkt-cta-final .waitlist-form { flex-direction: column; } }
-.mkt-cta-final .input {
-  background: rgba(255,255,255,0.06); border-color: rgba(243,242,234,0.28); color: var(--paper);
-  flex: 1;
-}
-.mkt-cta-final .input::placeholder { color: rgba(243,242,234,0.5); }
-.mkt-cta-final .btn--warm { color: #fff; }
-
 .mkt-footer {
   margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--rule);
   display: flex; gap: 16px; align-items: center; flex-wrap: wrap;

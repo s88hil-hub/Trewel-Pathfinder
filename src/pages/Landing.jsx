@@ -10,7 +10,7 @@ import { joinWaitlist, getWaitlistCount } from "../lib/api.js";
 // dominant email capture, backed by persistent server-side storage.
 // ---------------------------------------------------------------------------
 
-function WaitlistForm({ id, dark = false, count }) {
+function WaitlistForm({ id, count }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState("idle"); // idle | busy | done | error
   const [message, setMessage] = useState(null);
@@ -47,10 +47,8 @@ function WaitlistForm({ id, dark = false, count }) {
               strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <h2 style={dark ? { color: "var(--paper)" } : undefined}>
-          {duplicate ? "You're already on the list" : "You're on the list"}
-        </h2>
-        <p style={{ margin: "8px 0 0", color: dark ? "rgba(243,242,234,0.72)" : "var(--ink-2)" }}>
+        <h2>{duplicate ? "You're already on the list" : "You're on the list"}</h2>
+        <p style={{ margin: "8px 0 0", color: "var(--ink-2)" }}>
           {duplicate
             ? "We already have this email saved — we'll be in touch as spots open up."
             : "Thanks for signing up. We'll email you the moment early access opens."}
@@ -76,7 +74,7 @@ function WaitlistForm({ id, dark = false, count }) {
         aria-invalid={state === "error"}
         required
       />
-      <button className={`btn ${dark ? "btn--warm" : "btn--accent"}`} type="submit" disabled={state === "busy"}>
+      <button className="btn btn--accent" type="submit" disabled={state === "busy"}>
         {state === "busy" ? "Adding you…" : "Join the waitlist"}
       </button>
       {state === "error" ? (
@@ -85,10 +83,10 @@ function WaitlistForm({ id, dark = false, count }) {
         <div className="waitlist-meta">
           <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true">
             <path d="M8 1.5l5.5 2.2v3.4c0 3.4-2.3 6.1-5.5 7.4C4.8 13.2 2.5 10.5 2.5 7.1V3.7L8 1.5z"
-              fill="none" stroke={dark ? "rgba(243,242,234,0.6)" : "var(--ink-muted)"} strokeWidth="1.3" />
+              fill="none" stroke="var(--ink-muted)" strokeWidth="1.3" />
           </svg>
-          <span style={dark ? { color: "rgba(243,242,234,0.6)" } : undefined}>
-            No spam, ever.{count != null ? <> {" · "}<span className="waitlist-count" style={dark ? { color: "rgba(243,242,234,0.85)" } : undefined}>{count}</span> already waiting.</> : null}
+          <span>
+            No spam, ever.{count != null ? <> {" · "}<span className="waitlist-count">{count}</span> already waiting.</> : null}
           </span>
         </div>
       )}
@@ -207,20 +205,12 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* FINAL CTA */}
-        <section className="mkt-cta-final">
-          <h2>Verify adherence. Reclaim your week.</h2>
-          <p>
-            Join the dietitians and nutritionists using Trewel to turn meal photos into verified,
-            reviewable adherence — instead of taking food diaries on faith.
-          </p>
-          <WaitlistForm id="wl-final" dark count={count} />
-        </section>
-
-        <footer className="mkt-footer">
+        <footer className="mkt-footer" style={{ marginTop: 56 }}>
           <Wordmark />
           <span className="header-spacer" />
-          <span>Dietitian? <Link to="/researcher">Sign in to your console</Link> · Client? <Link to="/participant">Enter your code</Link></span>
+          <span>
+            Dietitian or researcher? <Link to="/researcher">Sign in to your console</Link> · Client? <Link to="/participant">Enter your code</Link>
+          </span>
         </footer>
       </div>
 
